@@ -14,11 +14,14 @@ from pybricks.robotics import DriveBase
 from pybricks.hubs import PrimeHub
 from pybricks.tools import wait
 from pybricks import version
-from utils import *
 
 # All default constant percentages will be defined here
 TIRE_DIAMETER = 56  # mm
-AXLE_TRACK = 103  # distance between the wheels, mm
+AXLE_TRACK = 113  # distance between the wheels, mm
+STRAIGHT_ACCEL = 200  # mm/s²
+STRAIGHT_DECEL = 600  # mm/s²
+TURN_ACCEL = 200  # deg/s²
+TURN_DECEL = 400  # deg/s²
 
 
 # Check the pybricks API documentation to see how these parameters are set
@@ -36,8 +39,8 @@ class BaseRobot:
 
     def __init__(self):
         self.hub = PrimeHub(top_side=Axis.Z, front_side=-Axis.Y)
-        self.leftDriveMotor = Motor(Port.E, Direction.COUNTERCLOCKWISE)
-        self.rightDriveMotor = Motor(Port.A)
+        self.leftDriveMotor = Motor(Port.A, Direction.COUNTERCLOCKWISE)
+        self.rightDriveMotor = Motor(Port.E)
         self.robot = DriveBase(
             self.leftDriveMotor,
             self.rightDriveMotor,
@@ -46,9 +49,10 @@ class BaseRobot:
         )
 
         self.leftAttachmentMotor = Motor(Port.B)
-        self.rightAttachmentMotor = Motor(Port.D)
+        self.rightAttachmentMotor = Motor(Port.F)
 
-        self.colorSensor = ColorSensor(Port.F)
+        self.colorSensorLeft = ColorSensor(Port.C)
+        self.colorSensorRight = ColorSensor (Port.D)
 
 
 # Write all of the "things" that your robot will need to do.
@@ -56,11 +60,7 @@ class BaseRobot:
 # their mission
 #
 # Here, we have two examples to get you started.
-    def moveLeftAttachmentMotorForMillis(
-        self,
-        millis,
-        speed,
-    ):
+    def moveLeftAttachmentMotorForMillis(self, millis, speed,):
         """
         Moves the left attachment motor for a set amount of time
 
@@ -81,47 +81,43 @@ class BaseRobot:
         self.leftAttachmentMotor.run_time(speed, millis)
 
 
-    def driveForDistance(
+    def driveForDistance(self, distance, speed, then=Stop.BRAKE, gyro=True, accel=STRAIGHT_ACCEL, decel=STRAIGHT_DECEL, ):
+       
+        self.robot.use_gyro(gyro)
+        self.robot.settings(
+            straight_speed=speed,
+            straight_acceleration=(accel, decel),
+        )
+        self.robot.straight(distance, then, wait)
+
+    def driveForTime(self, millis, speed, then=Stop.BRAKE, gyro=True):
+        self.robot.use_gyro(gyro)
+        self.robot.drive(speed, 0)
+        wait(millis)
+        if then == Stop.BRAKE:
+            self.robot.brake()
+        elif then == Stop.HOLD:
+            self.robot.hold()
+        else:
+            self.robot.stop()
+
+    def turnForAngle(
         self,
-        distance,
+        angle,
         speed,
         then=Stop.BRAKE,
         gyro=True,
+        accel=TURN_ACCEL,
+        decel=TURN_DECEL,
     ):
-        """
-        driveForDistance moves \
-        the robot forward a certain amount \
-
-        Parameters:
-        -------------
-        distance: REQUIRED how far forward the robot will move \
-        positive numbers move it forward \
-        and negative numbers move the robot backward \
-        -------------
-        speed: REQUIRED this controls how fast the robot will move \
-        positive numbers move the robot forward \
-        negative numbers move the robot backward \
-        -------------
-        then: OPTIONAL this function tells the robot what to do \
-        after the current line of code is done running \
-        our default for then is stop.BRAKE \
-        stop.BRAKE tells the robot that when it stops \
-        to stop and then dont do anything \
-        untill the next line of code \
-        -------------
-        gyro: OPTIONAL gyro is used most of the time during our code \
-        this function gives us the option to turn off gyro \
-        if we need to for some reason \
-        gyro is a tool that looks at whats in front of it \
-        and as the robot is moving gyro will make sure that \
-        the robot is more acurate than before \
-        -------------
-        """
         self.robot.use_gyro(gyro)
-        self.robot.settings(straight_speed=speed)
-        self.robot.straight(distance, then, wait)
+        self.robot.settings(
+            turn_rate=speed,
+            turn_acceleration=(accel, decel),
+        )
+        self.robot.turn(angle, then, wait)
 
-
+# write stop_line etc.
 # This BaseRobot class file is not meant to be run like the mission files.
 # But if someone does try (accidentally probably) to run it, show this
 # error message.
