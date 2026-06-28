@@ -1,8 +1,13 @@
 from base_robot import *
 
+
+
 def Run(br: BaseRobot):
     br.moveLeftAttachmentMotorForMillis(millis=500, speed=250)
-    br.driveForDistance (600)
+    br.driveForDistance(600, 200)
+    
+
+
 
 if __name__ == "__main__":
     br = BaseRobot()

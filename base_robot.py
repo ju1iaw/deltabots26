@@ -55,31 +55,10 @@ class BaseRobot:
         self.colorSensorRight = ColorSensor (Port.D)
 
 
-# Write all of the "things" that your robot will need to do.
-# These methods will then be available for team members to program the robot
-# their mission
-#
-# Here, we have two examples to get you started.
+# Write all of the functions that your robot will need to do.
+
     def moveLeftAttachmentMotorForMillis(self, millis, speed,):
-        """
-        Moves the left attachment motor for a set amount of time
-
-        Example:
-
-        >>> moveLeftAttachmentMotorForMillis(millis=500, speedPct=50)
-
-        Args:
-
-        millis (REQUIRED integer, > 0): how many miliseconds the left \
-        attachment motor will turn for. A millisecond is 0.001 of a second, \
-        so 5000 is 5 seconds.
-
-        speed (REQUIRED integer): Controls how fast \
-        the motor/motors will move. Positive numbers move the motor right, \
-        negative numbers turn it to the left.
-        """
         self.leftAttachmentMotor.run_time(speed, millis)
-
 
     def driveForDistance(self, distance, speed, then=Stop.BRAKE, gyro=True, accel=STRAIGHT_ACCEL, decel=STRAIGHT_DECEL, ):
        
@@ -101,15 +80,8 @@ class BaseRobot:
         else:
             self.robot.stop()
 
-    def turnForAngle(
-        self,
-        angle,
-        speed,
-        then=Stop.BRAKE,
-        gyro=True,
-        accel=TURN_ACCEL,
-        decel=TURN_DECEL,
-    ):
+    def turnForAngle(self, angle, speed, then=Stop.BRAKE, gyro=True, accel=TURN_ACCEL, decel=TURN_DECEL,):
+        '''accel/decel = mm/s increase in speed; for instance 100mm/s accel vs 200mm/s accel'''
         self.robot.use_gyro(gyro)
         self.robot.settings(
             turn_rate=speed,
@@ -117,10 +89,51 @@ class BaseRobot:
         )
         self.robot.turn(angle, then, wait)
 
-# write stop_line etc.
-# This BaseRobot class file is not meant to be run like the mission files.
-# But if someone does try (accidentally probably) to run it, show this
-# error message.
+    def stop_line(self, speed, reflectivity, sensor=Side.LEFT, tolerance=3, stop_below=True, gyro=True, then=Stop.BRAKE,):
+        self.robot.use_gyro(gyro)
+        color_sensor = self.colorSensorLeft if sensor in (Side.LEFT, "left") else self.colorSensorRight
+        self.robot.drive(speed, 0)
+        while True:
+            if stop_below and color_sensor.reflection() <= reflectivity + tolerance:
+                break
+            if not stop_below and color_sensor.reflection() >= reflectivity - tolerance:
+                break
+            wait(10)
+        if then == Stop.BRAKE:
+            self.robot.brake()
+        elif then == Stop.HOLD:
+            self.robot.hold()
+        else:
+            self.robot.stop()
+
+    def align_line(self, reflectivity, tolerance=3, forward_speed=0, max_turn_rate=40, kp=0.4, gyro=True, then=Stop.BRAKE,):
+        self.robot.use_gyro(gyro)
+        prev_turn_error = 0
+        while True:
+            left_refl = self.colorSensorLeft.reflection()
+            right_refl = self.colorSensorRight.reflection()
+            if abs(left_refl - reflectivity) <= tolerance and abs(right_refl - reflectivity) <= tolerance:
+                break
+            turn_error = left_refl - right_refl
+            if prev_turn_error != 0 and (turn_error > 0) != (prev_turn_error > 0):
+                turn_rate = turn_error * kp * 0.25
+            else:
+                closeness = min(abs(left_refl - reflectivity), abs(right_refl - reflectivity))
+                scale = min(1.0, closeness / max(tolerance * 3, 1))
+                turn_rate = turn_error * kp * max(scale, 0.15)
+            turn_rate = max(-max_turn_rate, min(max_turn_rate, turn_rate))
+            self.robot.drive(forward_speed, turn_rate)
+            prev_turn_error = turn_error
+            wait(10)
+        if then == Stop.BRAKE:
+            self.robot.brake()
+        elif then == Stop.HOLD:
+            self.robot.hold()
+        else:
+            self.robot.stop()
+
+
+
 if __name__ == "__main__":
     print("Don't run the BaseRobot class file. Nothing to do here.")
     print("You probably meant to run one of the mission files.")
