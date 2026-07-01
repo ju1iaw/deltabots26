@@ -38,7 +38,7 @@ class BaseRobot:
     """
 
     def __init__(self):
-        self.hub = PrimeHub(top_side=Axis.Z, front_side=-Axis.Y)
+        self.hub = PrimeHub(top_side=Axis.Z, front_side=Axis.X)
         self.leftDriveMotor = Motor(Port.A, Direction.COUNTERCLOCKWISE)
         self.rightDriveMotor = Motor(Port.E)
         self.robot = DriveBase(
@@ -63,10 +63,7 @@ class BaseRobot:
     def driveForDistance(self, distance, speed, then=Stop.BRAKE, gyro=True, accel=STRAIGHT_ACCEL, decel=STRAIGHT_DECEL, ):
        
         self.robot.use_gyro(gyro)
-        self.robot.settings(
-            straight_speed=speed,
-            straight_acceleration=(accel, decel),
-        )
+        self.robot.settings(speed, (accel, decel), 100, 100)
         self.robot.straight(distance, then, wait)
 
     def driveForTime(self, millis, speed, then=Stop.BRAKE, gyro=True):
@@ -83,10 +80,7 @@ class BaseRobot:
     def turnForAngle(self, angle, speed, then=Stop.BRAKE, gyro=True, accel=TURN_ACCEL, decel=TURN_DECEL,):
         '''accel/decel = mm/s increase in speed; for instance 100mm/s accel vs 200mm/s accel'''
         self.robot.use_gyro(gyro)
-        self.robot.settings(
-            turn_rate=speed,
-            turn_acceleration=(accel, decel),
-        )
+        self.robot.settings(100, 100, speed, (accel, decel))
         self.robot.turn(angle, then, wait)
 
     def stop_line(self, speed, reflectivity, sensor=Side.LEFT, tolerance=3, stop_below=True, gyro=True, then=Stop.BRAKE,):
