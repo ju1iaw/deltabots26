@@ -4,7 +4,8 @@ from base_robot import *
 def Run(br: BaseRobot):
     # br.moveLeftAttachmentMotorForMillis(millis=500, speed=250)
     # br.driveForDistance(600, 200)
-    br.turnForAngle(-90, 200)
+    # br.turnForAngle(-90, 200)
+    br.stop_line(200, 10)
 
 
 if __name__ == "__main__":
