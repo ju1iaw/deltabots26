@@ -59,6 +59,9 @@ class BaseRobot:
 
     def moveLeftAttachmentMotorForMillis(self, millis, speed,):
         self.leftAttachmentMotor.run_time(speed, millis)
+    
+    def moveRightAttachmentMotorForMillis(self, millis, speed,):
+        self.rightAttachmentMotor.run_time(speed, millis)
 
     def driveForDistance(self, distance, speed, then=Stop.BRAKE, gyro=True, accel=STRAIGHT_ACCEL, decel=STRAIGHT_DECEL, ):
        
