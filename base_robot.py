@@ -63,7 +63,7 @@ class BaseRobot:
     def driveForDistance(self, distance, speed, then=Stop.BRAKE, gyro=True, accel=STRAIGHT_ACCEL, decel=STRAIGHT_DECEL, ):
        
         self.robot.use_gyro(gyro)
-        self.robot.settings(speed, (accel, decel), 100, 100)
+        self.robot.settings(speed, accel, 100, 100)
         self.robot.straight(distance, then, wait)
 
     def driveForTime(self, millis, speed, then=Stop.BRAKE, gyro=True):
