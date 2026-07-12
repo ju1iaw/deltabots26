@@ -52,16 +52,37 @@ class BaseRobot:
         self.rightAttachmentMotor = Motor(Port.F)
 
         self.colorSensorLeft = ColorSensor(Port.C)
-        self.colorSensorRight = ColorSensor (Port.D)
+        self.colorSensorRight = ColorSensor(Port.D)
 
+    # Write all of the functions that your robot will need to do.
 
-# Write all of the functions that your robot will need to do.
-
-    def moveLeftAttachmentMotorForMillis(self, millis, speed,):
+    def moveLeftAttachmentMotorForMillis(
+        self,
+        millis,
+        speed,
+    ):
         self.leftAttachmentMotor.run_time(speed, millis)
+    
+    def moveRightAttachmentMotorForMillis(self, millis, speed,):
+        self.rightAttachmentMotor.run_time(speed, millis)
 
-    def driveForDistance(self, distance, speed, then=Stop.BRAKE, gyro=True, accel=STRAIGHT_ACCEL, decel=STRAIGHT_DECEL, ):
-       
+    def stop(self):
+        self.robot.stop()
+        self.leftDriveMotor.stop()
+        self.rightDriveMotor.stop()
+        self.leftAttachmentMotor.stop()
+        self.rightAttachmentMotor.stop()
+
+    def driveForDistance(
+        self,
+        distance,
+        speed,
+        then=Stop.BRAKE,
+        gyro=True,
+        accel=STRAIGHT_ACCEL,
+        decel=STRAIGHT_DECEL,
+    ):
+
         self.robot.use_gyro(gyro)
         self.robot.settings(speed, accel, 100, 100)
         self.robot.straight(distance, then, wait)
@@ -77,20 +98,47 @@ class BaseRobot:
         else:
             self.robot.stop()
 
-    def turnForAngle(self, angle, speed, then=Stop.BRAKE, gyro=True, accel=TURN_ACCEL, decel=TURN_DECEL,):
-        '''accel/decel = mm/s increase in speed; for instance 100mm/s accel vs 200mm/s accel'''
+    def turnForAngle(
+        self,
+        angle,
+        speed,
+        then=Stop.BRAKE,
+        gyro=True,
+        accel=TURN_ACCEL,
+        decel=TURN_DECEL,
+    ):
+        """accel/decel = mm/s increase in speed; for instance 100mm/s accel vs 200mm/s accel"""
         self.robot.use_gyro(gyro)
         self.robot.settings(100, 100, speed, (accel, decel))
         self.robot.turn(angle, then, wait)
 
-    def stop_line(self, speed, reflectivity, sensor=Side.LEFT, tolerance=3, stop_below=True, gyro=True, then=Stop.BRAKE,):
+    def stop_line(
+        self,
+        speed,
+        reflectivity,
+        sensor=Side.LEFT,
+        tolerance=3,
+        stop_below=True,
+        gyro=True,
+        then=Stop.BRAKE,
+    ):
         self.robot.use_gyro(gyro)
-        color_sensor = self.colorSensorLeft if sensor in (Side.LEFT, "left") else self.colorSensorRight
+        color_sensor = (
+            self.colorSensorLeft
+            if sensor in (Side.LEFT, "left")
+            else self.colorSensorRight
+        )
         self.robot.drive(speed, 0)
         while True:
-            if stop_below and color_sensor.reflection() <= reflectivity + tolerance:
+            if (
+                stop_below
+                and color_sensor.reflection() <= reflectivity + tolerance
+            ):
                 break
-            if not stop_below and color_sensor.reflection() >= reflectivity - tolerance:
+            if (
+                not stop_below
+                and color_sensor.reflection() >= reflectivity - tolerance
+            ):
                 break
             wait(10)
         if then == Stop.BRAKE:
@@ -100,19 +148,36 @@ class BaseRobot:
         else:
             self.robot.stop()
 
-    def align_line(self, reflectivity, tolerance=3, forward_speed=0, max_turn_rate=40, kp=0.4, gyro=True, then=Stop.BRAKE,):
+    def align_line(
+        self,
+        reflectivity,
+        tolerance=3,
+        forward_speed=0,
+        max_turn_rate=40,
+        kp=0.4,
+        gyro=True,
+        then=Stop.BRAKE,
+    ):
         self.robot.use_gyro(gyro)
         prev_turn_error = 0
         while True:
             left_refl = self.colorSensorLeft.reflection()
             right_refl = self.colorSensorRight.reflection()
-            if abs(left_refl - reflectivity) <= tolerance and abs(right_refl - reflectivity) <= tolerance:
+            if (
+                abs(left_refl - reflectivity) <= tolerance
+                and abs(right_refl - reflectivity) <= tolerance
+            ):
                 break
             turn_error = left_refl - right_refl
-            if prev_turn_error != 0 and (turn_error > 0) != (prev_turn_error > 0):
+            if prev_turn_error != 0 and (turn_error > 0) != (
+                prev_turn_error > 0
+            ):
                 turn_rate = turn_error * kp * 0.25
             else:
-                closeness = min(abs(left_refl - reflectivity), abs(right_refl - reflectivity))
+                closeness = min(
+                    abs(left_refl - reflectivity),
+                    abs(right_refl - reflectivity),
+                )
                 scale = min(1.0, closeness / max(tolerance * 3, 1))
                 turn_rate = turn_error * kp * max(scale, 0.15)
             turn_rate = max(-max_turn_rate, min(max_turn_rate, turn_rate))
@@ -125,7 +190,6 @@ class BaseRobot:
             self.robot.hold()
         else:
             self.robot.stop()
-
 
 
 if __name__ == "__main__":
