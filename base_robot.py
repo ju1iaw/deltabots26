@@ -159,15 +159,30 @@ class BaseRobot:
         then=Stop.BRAKE,
     ):
         self.robot.use_gyro(gyro)
+        
+        # Phase 1: Move forward until either sensor detects the line (black)
+        self.robot.drive(forward_speed, 0)
+        while True:
+            left_refl = self.colorSensorLeft.reflection()
+            right_refl = self.colorSensorRight.reflection()
+            if (left_refl <= reflectivity + tolerance or 
+                right_refl <= reflectivity + tolerance):
+                break
+            wait(10)
+        
+        # Phase 2: Alignment feedback loop until BOTH sensors are in threshold
         prev_turn_error = 0
         while True:
             left_refl = self.colorSensorLeft.reflection()
             right_refl = self.colorSensorRight.reflection()
-            if (
-                abs(left_refl - reflectivity) <= tolerance
-                and abs(right_refl - reflectivity) <= tolerance
-            ):
+            
+            # Check if both sensors are within the target reflectivity range
+            left_in_range = abs(left_refl - reflectivity) <= tolerance
+            right_in_range = abs(right_refl - reflectivity) <= tolerance
+            
+            if left_in_range and right_in_range:
                 break
+            
             turn_error = left_refl - right_refl
             if prev_turn_error != 0 and (turn_error > 0) != (
                 prev_turn_error > 0
