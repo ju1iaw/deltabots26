@@ -1,7 +1,7 @@
 from base_robot import *
 
 
-
+'''
 def Run(br: BaseRobot):
     
     br.moveLeftAttachmentMotorForMillis(millis=1000, speed=250)
@@ -25,4 +25,7 @@ def Run(br: BaseRobot):
 if __name__ == "__main__":
     br = BaseRobot()
     Run(br)
+
+'''
+
 
