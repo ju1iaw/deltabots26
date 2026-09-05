@@ -10,7 +10,7 @@ timeouts. Motors can continue at their last speed during those gaps.
 Call bot.Update() roughly every loop_ms in custom loops. Do not exit the
 mission before Wait_All(), unless deliberately cancelling with Stop_All().
 One drive job and one job per attachment may overlap; a second command on
-an occupied resource raises RuntimeError. Stop/Attachment_Stop cancel jobs.
+an occupied resource raises RuntimeError. Stop_Drive/Attachment_Stop cancel jobs.
 All job failures brake/cancel tracked jobs and propagate at the next service.
 Ports: drive A/E, attachments B/F, color sensors C/D. Forward motor
 directions assume the same build as the original DeltaBots base_robot.py.
@@ -51,9 +51,8 @@ Stop_Line with sensor=-1/+1 stops at the selected sensor's threshold.
 sensor=0 approaches until EITHER detects the line, then independently
 adjusts both wheels until BOTH readings reach reflectance +/- tolerance.
 both_mode='any' explicitly selects stop-on-either without alignment.
-Align_Line is a convenience wrapper for the same two-sensor edge alignment.
 All line routines require calibration at the actual sensor mounting height.
-Align_Line assumes two sensors mounted ahead of the wheels at equal offsets,
+Two-sensor alignment assumes two sensors mounted ahead of the wheels at equal offsets,
 approaching a transverse edge from white into black (or vice versa).
 
 Blocking drive/line/attachment routines have timeouts and raise MotionTimeout
@@ -77,7 +76,7 @@ docs.pybricks.com/en/stable/pupdevices/motor.html.
 from math import pi, sqrt
 from pybricks.hubs import PrimeHub
 from pybricks.pupdevices import Motor, ColorSensor
-from pybricks.parameters import Port, Direction, Axis, Stop, Button
+from pybricks.parameters import Port, Direction, Axis, Stop
 from pybricks.tools import wait, StopWatch
 
 DEFAULT_TIMEOUT_MS = 20000
@@ -131,7 +130,7 @@ def _stop_motor(motor, stop):
 
 
 class DeltaBots:
-    """Create one instance per mission program; all devices are required."""
+    """Create one shared instance per running script; all devices are required."""
 
     def __init__(self, wheel_diameter=56, axle_track=113,
                  left_drive=Port.A, right_drive=Port.E,
@@ -260,7 +259,7 @@ class DeltaBots:
 
     def Stop_All(self, stop=Stop.BRAKE):
         """Stop drive wheels and both attachments with explicit stop mode."""
-        self.Stop(stop)
+        self.Stop_Drive(stop)
         self._cancel(-1)
         self._cancel(1)
         _stop_motor(self.leftAttachmentMotor, stop)
@@ -284,9 +283,6 @@ class DeltaBots:
         """Average encoder distance in mm; zero is startup motor reference."""
         return (self.leftDriveMotor.angle() + self.rightDriveMotor.angle()) * self.mm_per_degree / 2
 
-    def Degrees_For_Distance(self, distance):
-        """Convert mm to wheel motor degrees (direct-drive wheels)."""
-        return distance / self.mm_per_degree
 
     def Reset_Gyro(self, angle=0, timeout_ms=DEFAULT_TIMEOUT_MS):
         """Coast all motors, wait for ready/stationary IMU, reset yaw.
@@ -611,15 +607,6 @@ class DeltaBots:
         self._stop_drive(stop)
         return self.Read_Reflectance()
 
-    def Align_Line(self, velocity=40, reflectance=50, tolerance=3,
-                   timeout_ms=DEFAULT_TIMEOUT_MS, stop=Stop.BRAKE, stop_below=True,
-                   kp=1.5, max_distance=1000, consecutive=3, wait=True):
-        """Convenience wrapper for Stop_Line's two-sensor edge alignment."""
-        return self.Stop_Line(sensor=0, velocity=velocity, reflectance=reflectance,
-                              stop=stop, timeout_ms=timeout_ms, stop_below=stop_below,
-                              consecutive=consecutive, max_distance=max_distance,
-                              tolerance=tolerance, fine_velocity=abs(velocity),
-                              align_kp=kp, wait=wait)
 
     def _attachment(self, side):
         if side == -1:
@@ -696,26 +683,3 @@ class DeltaBots:
         self._cancel(side)
         motor.brake()
         motor.reset_angle(angle)
-
-    def Wait_For_Button(self, button=Button.LEFT, timeout_ms=DEFAULT_TIMEOUT_MS):
-        """Wait for a fresh press after release; preserves center stop button."""
-        _positive(timeout_ms, 'timeout_ms')
-        timer = StopWatch()
-        try:
-            while button in self.hub.buttons.pressed():
-                self._deadline(timer, timeout_ms, 'Wait_For_Button release')
-                self.Wait(self.loop_ms)
-            while button not in self.hub.buttons.pressed():
-                self._deadline(timer, timeout_ms, 'Wait_For_Button press')
-                self.Wait(self.loop_ms)
-        except BaseException:
-            self.Stop_All()
-            raise
-        return button
-
-    # Define after method defaults so it does not shadow the Stop enum.
-    Stop = Stop_Drive
-
-
-# Optional class alias for teams familiar with the original class name.
-BaseRobot = DeltaBots

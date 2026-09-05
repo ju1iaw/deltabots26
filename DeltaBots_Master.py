@@ -466,7 +466,10 @@ def Program_8(bot):
 
 def Program_9(bot):
     """ID 9 - Spare. Set M = 10 to enable."""
+    from Robot_Self_Inspection import Robot_Self_Instpection
     Default_Program(bot, 9)
+    Robot_Self_Instpection(bot)
+    
 
 
 # ----- PROGRAM LOOKUP TABLE: TEAM MEMBERS EDIT OWNERS HERE -----
@@ -485,7 +488,7 @@ PROGRAMS = (
     (Program_6, 'Unassigned'),
     (Program_7, 'Unassigned'),
     (Program_8, 'Unassigned'),
-    (Program_9, 'Unassigned'),
+    (Program_9, 'Self_Inspection'),
 )
 
 
