@@ -66,6 +66,13 @@ class BaseRobot:
     def moveRightAttachmentMotorForMillis(self, millis, speed,):
         self.rightAttachmentMotor.run_time(speed, millis)
 
+    def moveRightAttachmentMotorForMillis(
+        self,
+        millis,
+        speed,
+    ):
+        self.rightAttachmentMotor.run_time(speed, millis)
+
     def stop(self):
         self.robot.stop()
         self.leftDriveMotor.stop()
