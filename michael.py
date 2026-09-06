@@ -16,53 +16,48 @@ def OutputReflectivity(br: BaseRobot):
 
 
 def Run(br: BaseRobot):
-
-    
-#    br.moveLeftAttachmentMotorForMillis(millis=1000, speed=250)
-    
-#    br.driveForDistance(610, 200)
-    
-#    br.moveLeftAttachmentMotorForMillis(millis=1000, speed=-250)
-
-#    br.turnForAngle(angle=30, speed=200, then=Stop.BRAKE, gyro=True, accel=TURN_ACCEL, decel=TURN_DECEL,)
-
-#    br.driveForDistance(50, 200)
-    
-#    br.turnForAngle(angle=-30, speed=200, then=Stop.BRAKE, gyro=True, accel=TURN_ACCEL, decel=TURN_DECEL,)
-
-#    br.driveForDistance(-610, 200)
-
     '''
-    br.stop_line(
-        speed=200,
-        reflectivity=20,
-        sensor=Side.LEFT,
-        tolerance=3,
-        stop_below=True,
-        gyro=True,
-        then=Stop.BRAKE,
-    )
-    #'''
-    
+    br.moveLeftAttachmentMotorForMillis(775, 200)
+    br.moveRightAttachmentMotorForMillis(1200, 200)
+    br.driveForDistance(422,200)
+    #br.moveLeftAttachmentMotorForMillis(2050, -100)
+    br.moveRightAttachmentMotorForMillis(370, -200)
+    br.driveForDistance(-130, 200)
+    #br.moveLeftAttachmentMotorForMillis(2050, 100)
+    br.moveRightAttachmentMotorForMillis(500, 200)    
+    #br.driveForDistance(-455,150)
+    br.moveRightAttachmentMotorForMillis(1300, -200)
+    br.driveForDistance(50, 200)
+    br.turnForAngle(-40, 200)
+    #br.driveForDistance(600, 200)
+    br.moveLeftAttachmentMotorForMillis(775, -200)
+    br.turnForAngle(50, 200)
+    br.driveForDistance(-30, 200)
+    br.moveLeftAttachmentMotorForMillis(1550, 100)
+    '''
+    #br.moveLeftAttachmentMotorForMillis(1550,200)
+    br.driveForDistance(630, 200) 
+    br.moveRightAttachmentMotorForMillis(900, 200)
+    br.turnForAngle(20, 200)
+    br.moveRightAttachmentMotorForMillis(800, -200)    
+    br.moveRightAttachmentMotorForMillis(950, 200)
+    br.driveForDistance(-100, 200)
+    br.driveForDistance(50, 200)
+    br.turnForAngle(-20, 200)
+    br.moveRightAttachmentMotorForMillis(1200, -200)
+    br.moveLeftAttachmentMotorForMillis(1550, -200)
+    br.turnForAngle(-90, 200)
+    br.driveForDistance(450, 200)
+    br.turnForAngle(135, 200)     
+    br.driveForDistance(600, 100)
 
-    br.align_line(
-        reflectivity=20,
-        tolerance=3,
-        forward_speed=30,
-        max_turn_rate=40,
-        kp=0.9,
-        gyro=True,
-        then=Stop.BRAKE,
-    )
-    
-    hub = PrimeHub()
-
+hub = PrimeHub()
 
 
 if __name__ == "__main__":
     br = BaseRobot()
-    OutputReflectivity(br)
-    # Run(br)
+    #OutputReflectivity(br)
+    Run(br)
 
 
 
