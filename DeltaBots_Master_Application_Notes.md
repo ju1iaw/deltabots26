@@ -1,6 +1,6 @@
 # DeltaBots Master — Application Notes
 
-**Applies to:** the current `DeltaBots_Master.py` with `Program_0`–`Program_9`, startup swinging enabled, and a swing acceleration factor of 1.5. Use it with the team’s current `DeltaBots_Base.py` supporting `Wait`, `Wait_All`, and `wait=False` movements.
+**Applies to:** the current `DeltaBots_Master.py` with `Program_0`–`Program_9`, CENTER cancellation, per-program swing settings, optional two-second tones, and a swing acceleration factor of 1.5. Use it with the team’s current `DeltaBots_Base.py` supporting `Wait`, `Wait_All`, and `wait=False` movements.
 
 ## 1. Program selection and controls
 
@@ -12,15 +12,22 @@ For example, Program 1 could perform game missions 8, 3, and 12 in that order, w
 
 | Control | Action |
 |---|---|
-| RIGHT press and release | Select the next ID, wrapping 9 → 0 with the default configuration. |
-| LEFT press and release | Select the previous ID, wrapping 0 → 9. |
-| CENTER press and release | Stop swinging, then run the selected program. |
-| Select ID 0, then CENTER press and release | Stop swinging, play B4 for one second, and quit the master. |
+| RIGHT press and release, in the menu | Select the next ID, wrapping 9 → 0, and apply its swing setting. |
+| LEFT press and release, in the menu | Select the previous ID, wrapping 0 → 9, and apply its swing setting. |
+| CENTER press and release, in the menu | Stop swinging, then run the selected program. |
+| A new CENTER press and release, while a program runs | Cancel the route, stop motors and sound, and return to selection. |
+| Select ID 0, then CENTER press and release | Stop swinging, play the optional B4 exit tone for two seconds, and quit the master. |
 | LEFT + RIGHT together | Stop the entire master through the hub’s configured stop-button combination. Restart the master to continue. |
 
 A held LEFT or RIGHT button does not repeatedly change the selection. The display uses full-size digits rotated 90° clockwise. After a runnable program finishes, its ID stays selected; there is no automatic advance.
 
-**The selector does not process normal LEFT/RIGHT/CENTER menu actions while a mission function is running.** The menu becomes available when that function and its outstanding tracked movements finish. The firmware stop combination remains available. Default tone-only programs return immediately, allowing navigation during the tone.
+**CENTER cancellation is cooperative.** The master checks buttons during base movement updates, `bot.Wait()`, `bot.Wait_All()`, `bot.Wait_For()`, and the master’s `Reset_Gyro()`. A fresh CENTER press and release unwinds the route, including pending tracked movements, so commands later in the route do not run.
+
+Raw sleeps, blocking raw motor calls, or long Python loops delay cancellation. Use `bot.Wait(ms)` for delays and `bot.Update()` regularly in custom loops. Do not swallow `BaseException` in member code; re-raise it after any necessary cleanup so `ProgramCancelled` can reach the master. Ordinary `except Exception` does not catch this cancellation signal.
+
+LEFT/RIGHT do not select another route while one is running. Cancel first, then select. LEFT+RIGHT still stops the entire master through the firmware. Button events are debounced (30 ms) and normally polled every 10 ms; a physical stop is not instantaneous.
+
+After cancellation or an ordinary program error, the selected ID stays displayed and swinging stays off. Change selection or complete a subsequent program successfully to apply swinging again. Default placeholder programs return immediately, so after their return CENTER starts another run rather than cancelling the previous one.
 
 ## 2. File organization and team ownership
 
@@ -98,28 +105,28 @@ This is what “merging” normally means: include the member’s file and conne
 
 Imports inside the wrapper delay loading until the program is selected. A missing module or function is reported as a program error, and the selector can recover. Module-level code still executes on its first import, so keep motor activity out of module-level statements.
 
-Replacing the default `Default_Program(bot, N)` call removes that placeholder tone. If a start tone is desired, explicitly call `Default_Program(bot, N)` before the member’s function. It uses nonblocking sound by default.
+The master now starts the optional program tone automatically before calling the route. Do not add `Default_Program(bot, N)` inside a wrapper just to get a start tone; that would restart the tone. Disable automatic tones with `PROGRAM_BEEP_ENABLED = False`.
 
 ### Step 4 — Update the owner labels in the lookup table
 
-The following complete table illustrates one member owning Programs 1 and 6. Keep the program functions in ID order and change the labels to match the actual assignments.
+The following complete table illustrates one member owning Programs 1 and 6. Keep the program functions in ID order, change labels to match assignments, and set each swing flag for that program’s loading needs.
 
 ```python
 PROGRAMS = (
-    (Program_0, 'Quit'),
-    (Program_1, 'Member 1'),
-    (Program_2, 'Member 2'),
-    (Program_3, 'Member 3'),
-    (Program_4, 'Member 4'),
-    (Program_5, 'Member 5'),
-    (Program_6, 'Member 1'),
-    (Program_7, 'Unassigned'),
-    (Program_8, 'Unassigned'),
-    (Program_9, 'Unassigned'),
+    (Program_0, 'Quit', False),
+    (Program_1, 'Member 1', False),
+    (Program_2, 'Member 2', False),
+    (Program_3, 'Member 3', False),
+    (Program_4, 'Member 4', False),
+    (Program_5, 'Member 5', False),
+    (Program_6, 'Member 1', False),
+    (Program_7, 'Unassigned', False),
+    (Program_8, 'Unassigned', False),
+    (Program_9, 'Robot_self_inspection', True),
 )
 ```
 
-The position of an entry determines its program ID, counting from zero. Store function references without parentheses: `Program_1`, not `Program_1(bot)`. The master passes `bot` when it runs the selected function. ID 0 is reserved for quitting and is handled separately by the menu code.
+Each entry is `(function, owner_label, swing_on_selection)`. The third value must be the Boolean `True` or `False`, without quotes. Legacy two-item entries are accepted and mean `False`. The position of an entry determines its program ID, counting from zero. Store function references without parentheses: `Program_1`, not `Program_1(bot)`. The master passes `bot` when it runs the selected function. ID 0 is reserved for quitting and is handled separately by the menu code.
 
 Owner labels are printed in the terminal. They do not restrict ownership, determine execution order, or control the motors. Do not move a row merely to group entries by owner; that would change the displayed ID associated with the row.
 
@@ -151,7 +158,7 @@ if __name__ == '__main__':
         bot.Stop_Sound()
 ```
 
-Importing `MasterRobot` does not start the menu because the master’s startup call is guarded. This launcher does not enable startup swinging or implement the master’s deferred end-of-program swing behavior. Verify loading behavior through the actual master.
+Importing `MasterRobot` does not start the menu because the master’s startup call is guarded. This separate launcher does not activate the selector’s cancellation monitor, automatic tones, or selection-based swing policy. Verify those behaviors through the actual master.
 
 ### Step 6 — Handle movement completion correctly
 
@@ -165,7 +172,7 @@ bot.Attachment_Time(1, 1000, velocity=300, stop=Stop.HOLD, wait=False)
 bot.Wait_All()  # Finish both tracked movements before proceeding.
 ```
 
-Use `bot.Wait(ms)` instead of `time.sleep()` or raw `pybricks.tools.wait()` during concurrent movements. Long blocking code prevents the custom gyro controller, sound timer, and swing monitoring from being serviced.
+Use `bot.Wait(ms)` instead of `time.sleep()` or raw `pybricks.tools.wait()` during concurrent movements. Long blocking code delays gyro updates, CENTER cancellation, sound timing, and swing monitoring.
 
 Do not start a second tracked command on the same motor resource before its earlier command finishes or is stopped. The two attachments and the drive are separate resources.
 
@@ -204,62 +211,62 @@ Choose one swing call for the required stroke; these are alternatives, not a seq
 | `bot.Swing_Attachments(x=-90)` | Start in the opposite direction. |
 | `bot.Stop_Swing()` | Cancel active or queued swinging; brake both motors without a return stroke. |
 
-### Enable or disable swinging when the master starts
+### Configure swinging for each program
 
-Near the top of `DeltaBots_Master.py`:
+The third item in each `PROGRAMS` entry decides whether to swing while that ID is selected:
 
 ```python
-SWING_ON_STARTUP = True
+    (Program_1, 'Member 1', False),
+    (Program_2, 'Member 2', True),
+```
+
+These are example rows inside the full table, not a replacement for it. Set `True` if loading for that program benefits from swinging. Set `False` if its attachment must stay still. Most supplied entries are `False`; Program 9 is configured as `True`. ID 0 never swings, even if its flag is accidentally set to True.
+
+There is no longer a `SWING_ON_STARTUP` setting. At startup, the master applies the initially selected entry’s flag. With the supplied `DEFAULT_PROGRAM_ID = 1` and Program 1 set to False, startup swinging is off. If the initial ID is 9, startup swinging is on.
+
+| Event | Swing behavior |
+|---|---|
+| Master starts | Apply the initial ID’s flag. |
+| LEFT/RIGHT selects another ID | Stop the previous swing, then start or leave off according to the newly selected entry. |
+| CENTER release launches a program | Stop swinging before calling the route. |
+| Program finishes successfully | Apply the same selected ID’s flag again. |
+| Program is cancelled or fails | Stop and keep swinging off; return to the menu. |
+| Swing stalls or times out | Stop and keep it off; do not retry on every menu update. |
+| Selection changes after a stall/cancellation | Apply the newly selected ID’s flag. |
+
+For example: select Program 9 → swinging starts → press/release CENTER → swinging stops and self-inspection starts → press/release CENTER again → self-inspection is cancelled and motors remain stopped in the menu.
+
+### Stroke and acceleration
+
+```python
 SWING_DEGREES = 90
 SWING_ACCELERATION_FACTOR = 1.5
 ```
 
-Use `True` when loading for the first planned program benefits from swinging. Use `False` when the first program needs its attachment to remain stationary or retain its prepared position. Set this before launching the master.
+`SWING_DEGREES` supplies the default stroke whenever the selector starts swinging. The factor 1.5 increases the acceleration and deceleration settings read before swinging by 50%. These are normally Pybricks defaults unless member code changed them. The helper uses smooth target movements, leaves speed/torque limits unchanged, and restores the original acceleration settings on stop, stall, timeout, or error. Restarts do not compound the multiplier.
 
-`SWING_DEGREES` controls the startup stroke. Later explicit `Swing_Attachments(x=...)` calls use their supplied stroke; a later call without `x` uses the function default of 90°, even if `SWING_DEGREES` was changed.
+### Optional custom stroke after a program
 
-The factor 1.5 applies a 50% increase to the acceleration and deceleration settings read immediately before swinging. These are normally Pybricks defaults, unless member code has changed them. Smooth target movements are used; speed and torque limits are left unchanged. Original acceleration settings are restored when swinging stops, including on a detected stall or timeout. Repeated starts do not repeatedly multiply the baseline.
-
-### Decide based on the next program’s needs
-
-**The current master does not automatically enable or disable swinging by selected program ID.** LEFT/RIGHT changes the displayed ID only; it does not change the swing state. Changing selection to a route that needs a fixed attachment does not undo movement that has already happened.
-
-| Situation | What to do |
-|---|---|
-| First program needs loading assistance | Set `SWING_ON_STARTUP = True` before launch. |
-| First program requires a fixed prepared attachment | Set `SWING_ON_STARTUP = False` before launch. |
-| After a route, loading for the planned next route needs swinging | Request swinging as the previous wrapper’s final operation. |
-| After a route, the next route needs no swinging | Do not request it at the previous route’s end. |
-| Cancel an active swing or a queued request from code | Call `bot.Stop_Swing()`. |
-| Next route is selected with LEFT/RIGHT | Existing swing continues; no per-ID loading policy is applied. |
-| CENTER is pressed and released to launch the next route | Both attachment motors brake and swinging stops before its wrapper is called. |
-
-A simple end-of-program loading policy can live in the master wrapper:
+A route can request a custom stroke at its end:
 
 ```python
-def Program_1(bot):
-    from Member1_Missions import Run_A
+def Program_2(bot):
+    from Member2_Missions import Run_A
     Run_A(bot)
-
-    # Set for the next route the team plans to run after this one.
-    swing_for_next_program = True
-    if swing_for_next_program:
-        bot.Swing_Attachments(x=90)
-    else:
-        bot.Stop_Swing()  # Also cancels a request made inside Run_A.
+    bot.Swing_Attachments(x=45)
 ```
 
-This local flag describes the planned transition; it does not detect which ID the operator selects later. If the next program is unpredictable, use a loading procedure agreed by the team rather than assuming the selector knows the next route’s needs.
+For this example, set Program 2’s LUT swing flag to `True`. Within the running program, this call queues the requested stroke. After successful completion and tracked-movement cleanup, the selector uses that stroke only if the selected entry enables swinging. A False flag suppresses the request. Cancellation or failure discards it.
 
-**Place a swing request last.** Inside a running master program, it queues the request instead of starting the motors immediately. After the route returns and all tracked movements finish successfully, the master performs its normal motor cleanup, starts swinging, and resumes the menu. A failed route cancels the queued request.
+A later LEFT/RIGHT selection transition uses `SWING_DEGREES` again. A direct `Swing_Attachments()` call without `x` uses its function default of 90°.
 
-For example: Program 1 finishes → swinging starts for loading → operator selects Program 6 → swinging continues → CENTER press/release → swinging stops → Program 6 starts.
+`bot.Stop_Swing()` stops active swinging and clears a queued request. It does not change the entry’s flag: after a successful program, an enabled entry will start swinging again with the default stroke. To configure no automatic swinging for a program, set its LUT flag to False.
 
 ### Stopping, stalls, and alignment
 
 CENTER release is detected using the menu’s debounce and polling logic (30 ms debounce; 10 ms menu polling). The stop command is sent before the next route starts; physical braking is not instantaneous.
 
-If either attachment stalls against a hard stop during swinging, both attachment motors brake and the swing ends. The menu stays running for the next command. A stroke exceeding 20,000 ms has the same recoverable behavior. There is no automatic swing retry.
+If either attachment stalls against a hard stop during swinging, both attachment motors brake and the swing ends. The menu stays running for the next command. A stroke exceeding 20,000 ms has the same recoverable behavior. There is no automatic retry while the selection stays idle; a selection transition or later successful program can start swinging again.
 
 Hard-stop contact **does not automatically reset encoder angles** and does not establish that both attachments have reached their intended alignment stops. The two-motor swing stops when either stalls. Use an explicit, separately tested alignment procedure when a repeatable reference position is required.
 
@@ -271,17 +278,27 @@ This recovery behavior applies specifically to the swing helper. It does not tur
 |---|---:|---|
 | `M` | 10 | Total selectable entries, including quit; IDs 0–9. Allowed count: 1–10. |
 | `DEFAULT_PROGRAM_ID` | 1 | Starting display ID. With `M = 1`, the master uses the only available ID, 0. |
-| `SWING_ON_STARTUP` | `True` | Begin loading swing when the master opens. |
-| `SWING_DEGREES` | 90 | Startup swing stroke in motor degrees. |
+| LUT swing flag | False, except ID 9 True | Controls swinging at startup, selection changes, and successful return. |
+| `SWING_DEGREES` | 90 | Default automatic swing stroke in motor degrees. |
 | `SWING_ACCELERATION_FACTOR` | 1.5 | Multiply pre-swing acceleration and deceleration by this factor. |
+| `PROGRAM_BEEP_ENABLED` | `True` | Enable automatic start/exit tones. |
+| `PROGRAM_BEEP_DURATION_MS` | 2000 | Automatic tone duration in milliseconds. |
 | `TONE_VOLUME` | 30 | Speaker volume percentage. |
 | `FINISH_TIMEOUT_MS` | 20000 | Outstanding-movement finish timeout and individual swing-stroke timeout. |
 
-Default program tones are ID 0: B4; IDs 1–9: C4, D4, E4, F4, G4, A4, B4, C5, D5. The placeholder tones last one second. ID 0 waits for its exit tone before quitting; other default tones allow the selector to resume immediately.
+Default program tones are ID 0: B4; IDs 1–9: C4, D4, E4, F4, G4, A4, B4, C5, D5. Automatic tones last two seconds and are started for custom routes as well as placeholder programs. Normal tones are nonblocking: the route starts without waiting for the tone. After route completion, the selector may be used while the tone continues. ID 0 waits for its exit tone before quitting.
 
-## 6. Add robot self-inspection to Program 9
+```python
+PROGRAM_BEEP_ENABLED = False  # Disable automatic program and exit tones.
+PROGRAM_BEEP_DURATION_MS = 2000
+TONE_VOLUME = 30
+```
 
-Save `Robot_Self_Inspection.py` beside the master and base. Replace the existing Program 9 body with:
+This option does not disable explicit custom `bot.Beep(...)` calls. Cancelling a running program stops its current sound. Stopping sound at the configured time requires normal bot updates; blocking code can delay it.
+
+## 6. Program 9: robot self-inspection
+
+Program 9 is already connected in the supplied master. Save `Robot_Self_Inspection.py` beside the master and base. Its wrapper is:
 
 ```python
 def Program_9(bot):
@@ -291,7 +308,7 @@ def Program_9(bot):
 
 The supplied self-inspection module supports this function spelling. It also provides `Robot_Self_Inspection` as a correctly spelled alias.
 
-Update the existing ID 9 lookup-table entry to `(Program_9, 'Robot self-inspection')` and keep `M = 10`. Save the files, run the master, select 9, then press and release CENTER.
+Its configured lookup-table entry is `(Program_9, 'Robot_self_inspection', True)`. Keep `M = 10`. Save the files, run the master, select 9, then press and release CENTER.
 
 The master stops swinging before entering the self-check. The check uses the shared bot and tests driving, turning, reflectance readings, and attachment motion; it does not require a black line. Provide clearance for the 500 mm square route and pivot sweeps, and use attachments that can rotate through the requested two revolutions. Its nominal return to the start requires physical verification.
 
@@ -304,9 +321,11 @@ The master stops swinging before entering the self-check. The check uses the sha
 | Program runs when imported | Remove top-level route calls and hardware creation; put activity inside `Run_A(bot)` or another entry function. |
 | Duplicate hardware or wrong robot object | Use the supplied `bot`. `bot = DeltaBots` is a class reference, and `DeltaBots()` creates another instance; neither belongs inside the imported route. |
 | Motor resource busy | Wait for or stop the previous tracked command before starting another on the same resource. |
-| Swing does not start inside a route | Under the master, this is a queued request. It starts after successful route completion and tracked-movement cleanup. |
+| Swing does not start inside a route | The request is deferred until successful return and only used when the selected entry’s swing flag is True. |
 | Swing stopped after touching a hard stop | Expected recovery behavior. Both attachment motors stop; use the menu for the next command. |
-| Changing selected ID did not stop swinging | Expected: selection leaves it active. Launching with CENTER stops it. |
+| Swinging continues after selecting another ID | Check the new entry’s flag; True starts a new swing for that selection. False leaves it off. |
+| CENTER does not promptly cancel | Replace raw sleeps/blocking motor calls with bot methods; service `bot.Update()` in custom loops. |
+| A False swing setting is rejected | Use `False`, not the string `'False'`; the flag must be a Boolean. |
 | New program ID is missing | Check `M`, the wrapper definition, and the entry’s position in the lookup table. |
 | Changes do not appear on the hub | Save all edited files and upload/run the intended master from the correct project folder. |
 

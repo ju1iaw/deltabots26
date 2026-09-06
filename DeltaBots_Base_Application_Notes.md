@@ -1,6 +1,6 @@
 # DeltaBots Base — Application Notes
 
-This guide explains how to use the current `DeltaBots_Base.py` to build robot routes. It covers the eight main movement and attachment functions first, followed by concurrent operation, supporting functions, configuration, and troubleshooting.
+This guide explains how to use the current `DeltaBots_Base.py` to build robot routes. It covers eleven important movement, attachment, and waiting functions first, followed by concurrent operation, supporting functions, configuration, and troubleshooting.
 
 Examples use the exact function names and parameters from the source. The gyro reset function is `Reset_Gyro()`. Use one robot instance per running script and pass it to each route function.
 
@@ -55,7 +55,7 @@ The program ID is not a game mission number. One program can perform several gam
 
 The master brakes all motors when your program finishes. An attachment’s HOLD setting does not stay active through that final cleanup.
 
-## 3. The eight main functions
+## 3. The eleven important functions
 
 ### 1 — Reset_Gyro: choose the robot’s heading reference
 
@@ -87,16 +87,21 @@ bot.Gyro_Move(direction=0, distance=-500, velocity=150,
 
 | Parameter | Meaning |
 |---|---|
-| `direction` | Heading to face while moving. |
+| `direction` | Heading to face while moving; `None` holds the starting heading. |
 | `distance` | How far to move: positive forward, negative backward. |
 | `velocity` | Maximum requested driving speed. Keep it positive here. |
-| `acceleration` | How quickly the requested driving speed increases. |
+| `acceleration` | How quickly the requested driving speed increases, in mm/s². |
+| `deceleration` | How quickly the requested driving speed decreases, in mm/s²; default 400. |
 | `stop` | How to stop at the end. |
 | `wait` | Whether to finish this movement before continuing. |
 
 **Turn toward the desired direction first.** This function holds a heading; it is not a command to drive to a location on the mat.
 
 Start with the example speeds. A very large speed number does not guarantee faster travel because the motors have limits.
+
+The current custom controller uses `heading_kp=1.5`, damping `heading_kd=0.5`, filtered yaw-rate estimation, and `turn_acceleration=120` degrees/s². These are steering settings; the `acceleration` parameter controls forward/backward speed.
+
+`Gyro_Move()` has no `absolute` argument. A specified `direction` is always a target heading relative to the gyro reference, not an amount to turn. For example, from heading 50°, `direction=100` corrects toward 100°, rather than adding 100°. With `direction=None`, it holds the starting heading. It uses the shortest heading correction, so 270° and -90° represent the same direction. This differs from `Gyro_Turn(absolute=True)`, which uses an accumulated target and does not wrap the turn difference. It corrects toward that heading while moving; `Move_Straight()` instead holds the starting heading using native DriveBase control.
 
 ### 3 — Gyro_Turn: turn through an angle
 
@@ -114,7 +119,21 @@ bot.Gyro_Turn(-90, pivot=0, velocity=90,
               acceleration=200, stop=Stop.BRAKE, wait=True)
 ```
 
-**The first number means how much to turn from the current direction.** If the robot faces 90° and you call `Gyro_Turn(90)`, it ends facing 180°.
+**By default, `absolute=False`: the first number means how much to turn from the current heading.** Set `absolute=True` to use a final accumulated heading instead.
+
+| Robot currently faces 50° | Requested rotation | Final heading |
+|---|---:|---:|
+| `bot.Gyro_Turn(100, absolute=False)` | +100° | 150° |
+| `bot.Gyro_Turn(100, absolute=True)` | +50° | 100° |
+
+To turn to heading 100°:
+
+```python
+bot.Gyro_Turn(100, absolute=True, pivot=0, velocity=90,
+              acceleration=200, stop=Stop.BRAKE, wait=True)
+```
+
+With `absolute=True`, the sign of the **difference between target and current heading** determines rotation direction. A positive target does not always mean clockwise.
 
 | `pivot` | Where the robot turns around |
 |---:|---|
@@ -129,7 +148,7 @@ bot.Gyro_Turn(90, pivot=-1, velocity=90,
               acceleration=200, stop=Stop.BRAKE, wait=True)
 ```
 
-A wheel-pivot turn also shifts the robot’s center. Account for that when planning a route. Each turn must be between -355° and +355°. Use two 180° turns for a full circle.
+A wheel-pivot turn also shifts the robot’s center. Account for that when planning a route. Each requested rotation must be between -355° and +355°; for `absolute=True`, this limit applies to target minus current accumulated heading, not to the target number itself. Use two 180° turns for a full circle.
 
 **Additional turn options:** fractional pivots and pivots outside -1 to +1 are supported. The pivot point is `pivot * axle_track / 2` mm to the right of axle center.
 
@@ -240,6 +259,100 @@ Keep velocity positive. The motor chooses the direction needed to reach the targ
 
 Calling `Attachment_Target` with the same target twice does not request another full movement. The motor is already near that position.
 
+`Attachment_Target()` always uses an absolute **motor encoder position**; it does not accept an `absolute` parameter. `Attachment_Angle()` always requests a relative movement. Neither uses the robot’s gyro heading.
+
+### 9 — Move_Straight: native straight driving with the IMU
+
+Use this for an ordinary straight segment along the direction the robot currently faces:
+
+```python
+bot.Move_Straight(distance=500, velocity=150,
+                  acceleration=200, deceleration=400,
+                  stop=Stop.BRAKE, wait=True)
+```
+
+To drive backward, use `distance=-500` and keep `velocity` positive.
+
+| Parameter | Meaning and default |
+|---|---|
+| `distance` | Signed travel in mm; default 100. Positive is forward, negative backward. |
+| `velocity` | Positive requested speed in mm/s; default 150, subject to the configured speed cap. |
+| `acceleration` | Speed increase in mm/s²; default 200. |
+| `deceleration` | Speed decrease in mm/s²; default 400. |
+| `stop` | End behavior; default `Stop.BRAKE`. |
+| `timeout_ms` | Maximum movement time; default 20000 ms. |
+| `wait` | Default `True` waits for completion; `False` returns a movement task. |
+
+The function uses native Pybricks DriveBase with IMU enabled. **`wait=False` uses the same native driving controller as `wait=True`.** It can run alongside attachment movements. The wrapper checks completion and timeout and keeps master cancellation responsive through the bot scheduler.
+
+It does not reset the gyro and has no `direction` or `absolute` argument. To face a specific heading, turn first:
+
+```python
+bot.Gyro_Turn(90, absolute=True, pivot=0, velocity=90,
+              acceleration=200, stop=Stop.BRAKE, wait=True)
+bot.Move_Straight(distance=500, velocity=150,
+                  acceleration=200, stop=Stop.BRAKE, wait=True)
+```
+
+| Choose… | When you need… |
+|---|---|
+| `Move_Straight()` | Native driving that holds the heading at the start of the movement. |
+| `Gyro_Move(direction=..., ...)` | Custom driving that corrects toward a specified heading while moving. |
+
+Both support forward/backward travel and concurrent attachments. With `wait=True`, each returns signed encoder travel in mm. This is not a measurement of sideways position or proof of exact travel on the mat.
+
+The base manages switching between native control and custom driving or pivot turns. Do not create a separate DriveBase for these same motors. Native `Stop.HOLD` maintains the drive position and heading until another command releases it; the master’s final cleanup still brakes all motors.
+
+### 10 — Wait: pause the route for a specified time
+
+```python
+bot.Wait(1500)
+```
+
+Waits 1500 ms (1.5 seconds), while continuing to service active movement tasks. `millis` must be nonnegative. This helper has no `wait`, `stop`, or `absolute` parameter.
+
+**It waits for time to pass, not for all motors to finish.** If a movement takes four seconds, `bot.Wait(1500)` lets the next route command start after about 1.5 seconds while that movement may still be active. It does not stop an unfinished movement when the delay ends.
+
+```python
+bot.Move_Straight(distance=600, velocity=150,
+                  acceleration=200, stop=Stop.BRAKE, wait=False)
+bot.Wait(1500)
+bot.Attachment_Time(1, 1000, velocity=300,
+                    stop=Stop.HOLD, wait=False)
+bot.Wait_All()
+```
+
+Use `bot.Wait()` instead of `time.sleep()` or raw `pybricks.tools.wait()` in routes. It services custom steering, movement deadlines, and the master’s cancellation checks. The native drive controller runs in firmware, but the wrapper still needs scheduler updates for completion and timeout handling.
+
+### 11 — Wait_All: wait until tracked movements finish
+
+```python
+bot.Move_Straight(distance=500, velocity=150,
+                  acceleration=200, stop=Stop.BRAKE, wait=False)
+bot.Attachment_Time(-1, 1000, velocity=300,
+                    stop=Stop.HOLD, wait=False)
+bot.Wait_All()
+```
+
+The next route statement runs only after all tracked finite movements finish. This includes driving, turning, line detection, and attachment Angle/Target/Time tasks. While waiting, the scheduler continues servicing these tasks. If no tracked movements remain, it returns immediately.
+
+| Call | What determines when it returns? |
+|---|---|
+| `bot.Wait(1500)` | About 1500 ms has passed, even if motors are still moving. |
+| `bot.Wait_All()` | All tracked finite movements have finished. |
+| `bot.Wait_For(task)` | The selected task has finished; other tasks may still be active. |
+
+`Wait_All(timeout_ms=20000)` has a default 20-second timeout starting when it is called. Each movement also keeps its own timeout. For a longer movement, increase both budgets where needed:
+
+```python
+bot.Move_Straight(distance=2000, velocity=75,
+                  acceleration=200, stop=Stop.BRAKE,
+                  timeout_ms=40000, wait=False)
+bot.Wait_All(timeout_ms=40000)
+```
+
+`Wait_All()` does not wait for or stop continuous `Attachment_Run()` commands, master attachment swinging, or a beep. Stop continuous attachment rotation explicitly with `Attachment_Stop()`. If `Wait_All()` times out, it stops the motors and raises `MotionTimeout`. It has no `wait`, `stop`, or `absolute` parameter.
+
 ## 4. Moving an attachment while driving or turning
 
 Use `wait=True` for sequential actions. To overlap actions on different motor resources, use `wait=False`:
@@ -330,7 +443,7 @@ Most movements have a **20-second timeout**: a `MotionTimeout` exception is rais
 |---|---|
 | `Gyro_Reset` is not found | Use the exact name `Reset_Gyro`. |
 | Robot moves the wrong way | Check distance sign, motor ports, and motor mounting. |
-| Robot turns to the wrong heading | `Gyro_Turn(90)` means turn another 90°, not face 90°. |
+| Robot turns to the wrong heading | `Gyro_Turn(90)` turns another 90°; `Gyro_Turn(90, absolute=True)` targets accumulated heading 90°. |
 | Negative attachment velocity is rejected | Angle/Target require positive velocity. Use angle/target to choose direction. |
 | Motor resource busy | A previous command on that motor is still active. Finish or stop it first. |
 | `wait=False` motion behaves incorrectly | Use `bot.Wait`, `bot.Wait_All`, or another bot scheduler helper. |
@@ -378,8 +491,11 @@ The examples deliberately keep the commonly changed parameters visible. Other pa
 | Function | Additional defaults and behavior |
 |---|---|
 | `Reset_Gyro` | `angle=0`, timeout 20000 ms. Coasts all motors, waits one second, then requires IMU ready and stationary. Returns accumulated heading. It resets the heading reference, not the physical robot pose. |
-| `Gyro_Move` | `direction=None` holds starting heading; `distance=100`, velocity 150, acceleration 200, deceleration 400. Distance tolerance 2 mm; heading gain 3; correction cap 60 deg/s; distance gain 4. Returns signed encoder travel. |
-| `Gyro_Turn` | Relative by default; pivot 0, velocity 90, acceleration 200, deceleration 300, tolerance 1°, gain 3. Returns final accumulated heading. |
+| `Gyro_Move` | `direction=None` holds starting heading; `distance=100`, velocity 150, acceleration 200, deceleration 400. Distance tolerance 2 mm; heading gain 1.5; damping 0.5; yaw-rate filter time constant 50 ms; steering acceleration 120 deg/s²; correction cap 60 deg/s; distance gain 4. Returns signed encoder travel. |
+| `Move_Straight` | Native IMU drive along starting heading. Distance 100 mm, velocity 150 mm/s, acceleration 200 and deceleration 400 mm/s². Native completion criteria; no custom heading gains or tolerance argument. Returns signed encoder travel. |
+| `Wait` | Required `millis` argument; services tasks for that duration. Does not wait for movement completion or stop unfinished tasks. |
+| `Wait_All` | Timeout 20000 ms from this call; services all tracked finite tasks until finished. Does not wait for continuous attachment rotation. |
+| `Gyro_Turn` | `absolute=False` is relative; `absolute=True` targets accumulated heading. Otherwise pivot 0, velocity 90, acceleration 200, deceleration 300, tolerance 1°, gain 3. Returns final accumulated heading. |
 | `Stop_Line` | Sensor 0, velocity 80, reflectance 50, both mode `'all'`, `stop_below=True`, 3 consecutive samples, maximum travel 1000 mm, reflectance tolerance 2, fine speed 30 mm/s, alignment gain 1.5. Returns both final reflectances. |
 | `Attachment_Angle` / `Attachment_Target` | Velocity 300 deg/s, stop HOLD, timeout 20000 ms, wait True. Return final encoder angle. |
 | `Attachment_Time` | Same defaults; duration must be positive and no greater than timeout. Returns final encoder angle. |
@@ -399,7 +515,7 @@ Negative velocity reverses travel and the alignment correction direction. `stop_
 
 At most one tracked drive job and one job per attachment may run at once. Calling another command on a busy tracked resource raises `RuntimeError`. Finish the earlier job or cancel it with the appropriate stop function first.
 
-The scheduler runs when serviced by `Wait`, `Wait_For`, `Wait_All`, or `Update`; it is not a background thread. Raw sleeps and blocking raw motor commands can prevent gyro updates and delay timeout detection. Motors can continue at their last command during that gap.
+The scheduler runs when serviced by `Wait`, `Wait_For`, `Wait_All`, or `Update`; it is not a background thread. Raw sleeps and blocking raw motor commands can prevent custom gyro updates and delay timeout detection and master cancellation. Motors can continue at their last command during that gap. Native `Move_Straight` control continues in firmware, but Python completion and deadline checks still require the scheduler.
 
 Each movement’s deadline starts when it is issued. `Wait_All(timeout_ms=...)` adds its own deadline starting when called. The master also uses `FINISH_TIMEOUT_MS` when joining pending work after a program returns.
 
@@ -454,7 +570,11 @@ Gyro_Turn(angle, pivot=0, velocity=90, acceleration=200, deceleration=300, toler
 ```
 
 ```text
-Gyro_Move(direction=None, distance=100, velocity=150, acceleration=200, deceleration=400, stop=Stop.BRAKE, timeout_ms=DEFAULT_TIMEOUT_MS, tolerance=2, heading_kp=3, max_turn_rate=60, distance_kp=4, wait=True)
+Gyro_Move(direction=None, distance=100, velocity=150, acceleration=200, deceleration=400, stop=Stop.BRAKE, timeout_ms=DEFAULT_TIMEOUT_MS, tolerance=2, heading_kp=1.5, max_turn_rate=60, distance_kp=4, wait=True, heading_kd=0.5, turn_acceleration=120)
+```
+
+```text
+Move_Straight(distance=100, velocity=150, acceleration=200, deceleration=400, stop=Stop.BRAKE, timeout_ms=DEFAULT_TIMEOUT_MS, wait=True)
 ```
 
 ```text
@@ -496,4 +616,3 @@ Attachment_Stop(side, stop=Stop.HOLD)
 ```text
 Attachment_Reset(side, angle=0)
 ```
-

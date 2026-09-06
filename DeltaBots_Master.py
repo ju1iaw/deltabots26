@@ -1,73 +1,51 @@
-"""DeltaBots program selector for SPIKE Prime / Pybricks 4.0.1.
+"""DeltaBots program selector for SPIKE Prime / Pybricks.
 
-Save beside the current DeltaBots_Base.py (with Wait and Wait_All).
-Run in PowerShell (set the variable to your own hub's Bluetooth name):
+Save beside DeltaBots_Base.py and all member route modules.
+PowerShell upload (use your own hub name):
     $robot_name = "YOUR_HUB_NAME"
     py -3 -m pipx run pybricksdev run ble --name $robot_name DeltaBots_Master.py
-The name is a computer-side connection option, not a hub-side Python setting.
 
-CONTROLS (one action per debounced press-and-release):
-  RIGHT: next ID, wrapping m-1 -> 0.
-  LEFT: previous ID, wrapping 0 -> m-1.
-  CENTER: stop attachment swinging, then run selected program; ID 0 quits.
-  LEFT + RIGHT together: firmware stop; exits this entire master program.
-  Restart the master after a firmware stop. Holding center can power off hub.
+MENU:
+  LEFT/RIGHT press and release: select ID and apply its swing setting.
+  CENTER press and release: stop swinging and launch selected program.
+  ID 0: play optional exit tone and quit.
+DURING A PROGRAM:
+  A NEW CENTER press and release cancels the route and returns to the menu.
+  Motors and sound stop; swinging stays off after cancellation or error until
+  selection changes or a subsequent program completes successfully.
+  LEFT+RIGHT remains the firmware stop combination for the entire master.
 
-PROGRAM IDs AND FLL MISSIONS:
-  The displayed ID selects a PROGRAM, not an FLL game mission number.
-  A program may perform one or several of the team's 13 FLL missions.
-  Write those mission actions inside Program_N in the desired execution order;
-  they do not need to follow FLL mission-number order. Programs can also be
-  selected in any order; finishing one never automatically starts another.
-  One member may own multiple programs. The LUT position is only the program ID.
+Cancellation is cooperative: bot.Update(), bot.Wait(), finite base movement
+calls, and this class's Reset_Gyro service button events. Raw sleeps, blocking
+motor calls, or long Python loops delay cancellation. Use bot.Wait(ms) for
+pauses and call bot.Update() regularly in custom loops. Do not catch
+BaseException in a route except to clean up and re-raise it.
 
-TEAM WORKFLOW:
-  1. Set M to an integer 1..10; default 10 means quit plus nine runnable programs.
-     DEFAULT_PROGRAM_ID chooses the initial ID (default 1; M=1 uses 0).
-  2. Replace owner labels in PROGRAMS with team names. A member may own
-     several programs; labels are descriptive and never control execution.
-  3. Each member edits only their assigned Program_N(bot) function(s).
-  4. Keep function names, the bot parameter, and table ordering unchanged.
-  5. Use the supplied bot; never create another DeltaBots/PrimeHub/Motor.
-  6. Call bot.Reset_Gyro() at the start if your mission needs heading zero.
-     This releases all motors: support loaded attachments before launch.
-  7. Use bot.Wait(ms), not tools.wait/time.sleep, during concurrent motions.
-  8. Return normally at mission end. No infinite loop, main(), or sys.exit().
-     The master waits for outstanding tracked motions, then brakes ALL motors.
-     Continuous Attachment_Run must be stopped by the mission when appropriate.
-  9. Mission exceptions are printed to the connected terminal; all motors
-     brake and the menu becomes available again. Firmware stop is not caught.
+PROGRAMS entries are (function, owner, swing). swing defaults to False;
+legacy two-item entries also mean False. The selected entry controls swinging
+at startup, on selection changes, and after successful program completion.
+ID 0 never swings. An end-of-program Swing_Attachments(x) request supplies a
+custom stroke only when that selected entry enables swinging. On a stall or
+20-second stroke timeout, swinging stops and the menu remains responsive.
+There is no automatic retry until selection changes or a program succeeds.
 
-OPTIONAL SEPARATE FILES (recommended as the five people's code grows):
-  Keep Program_1(bot) here as a small adapter:
-      from Member1_Missions import Run1
-      Run1(bot)
-  Put Run1(bot) in Member1_Missions.py beside this file. Import inside the
-  adapter so a missing/broken team module is reported only when selected.
-  Do not create hardware or run a mission at module import time.
+Program IDs differ from FLL game mission IDs. One member can own several
+programs; each may perform any game missions in any order. Edit Program_N
+functions and PROGRAMS near the bottom. Reuse the provided bot:
+    def Program_1(bot):
+        from Member1_Missions import Run_A
+        Run_A(bot)
+Never create another hub/robot/motor in an imported route. Keep module import
+free of movement. Return normally; pending tracked movements are joined with
+a 20-second finish timeout, then all motors brake. Continuous Attachment_Run
+must be stopped explicitly when needed. Stop.HOLD does not persist through
+the master's final cleanup.
 
-ID 0 plays B4 for one second before quitting. Slots 1..9 play one-second
-C-major scale tones from C4 through D5, without
-robot movement. Replace only the desired function bodies. The selector uses
-custom full-width 5x5 digits rotated 90 degrees clockwise.
-Tones are nonblocking: the selector remains responsive while they sound.
-A new tone replaces the previous tone because the hub has one speaker.
-Sound deadlines are serviced by bot.Update/Wait/Wait_All and the menu loop.
-Use bot.Wait during custom mission delays; raw blocking code can delay a
-tone's stop time, just as it can delay custom gyro control.
-
-ATTACHMENT LOADING:
-  SWING_ON_STARTUP=True by default: swinging starts when the master opens.
-  Or add bot.Swing_Attachments(x=90) at the end of a mission. This queues
-  loading motion until that mission's tracked movements finish successfully.
-  Each stroke is x degrees, from the current position to current+x and back.
-  LEFT/RIGHT selection leaves swinging active; CENTER release brakes both
-  attachments before launching the selected program. bot.Stop_Swing() also
-  cancels it. Cancellation is serviced at the next menu/update cycle, not
-  during arbitrary blocking code. Each stroke has a 20-second timeout.
-  A stall against a hard stop (or a stroke timeout) ends swinging and brakes
-  both attachments. The menu keeps running, ready for the next command.
-  This does not reset the attachment encoder angles automatically.
+PROGRAM_BEEP_ENABLED controls automatic program tones (including quit).
+Program tones are 2000 ms by default, volume 30. Normal program tones start
+without blocking; quit waits for its tone before exiting. Custom Beep calls
+are separate and are not disabled by this automatic-tone option.
+Digits use all five columns and are rotated 90 degrees clockwise.
 """
 
 from DeltaBots_Base import DeltaBots, Stop, MotionTimeout
@@ -78,12 +56,13 @@ from pybricks.tools import StopWatch
 # ----- TEAM CONFIGURATION -----
 M = 10                      # Number of selectable programs: integer 1..10 (IDs 0..9).
 DEFAULT_PROGRAM_ID = 1      # Initial selection; M=1 automatically uses ID 0.
-SWING_ON_STARTUP = True     # True starts attachment loading motion at startup.
-SWING_DEGREES = 90          # Stroke from starting angle to starting angle + x.
+SWING_DEGREES = 90          # Default stroke for entries with swing=True.
 SWING_ACCELERATION_FACTOR = 1.5  # 50% above pre-swing acceleration/deceleration.
 POLL_MS = 10
 DEBOUNCE_MS = 30
 FINISH_TIMEOUT_MS = 20000    # Wait for remaining wait=False jobs after return.
+PROGRAM_BEEP_ENABLED = True # False disables automatic start/exit tones.
+PROGRAM_BEEP_DURATION_MS = 2000
 TONE_VOLUME = 30            # Speaker volume in percent, 0..100.
 PROGRAM_TONES = (494, 262, 294, 330, 349, 392, 440, 494, 523, 587)
 # B4 (quit), C4, D4, E4, F4, G4, A4, B4, C5, D5; rounded Hz, A4 = 440 Hz.
@@ -104,6 +83,10 @@ BIG_DIGITS = (
 )
 
 
+class ProgramCancelled(BaseException):
+    """Unwind a running route on CENTER release; caught only by the master."""
+
+
 class MasterRobot(DeltaBots):
     """Adds timed audio and menu attachment swinging to the movement scheduler.
 
@@ -121,6 +104,8 @@ class MasterRobot(DeltaBots):
         self._swing_limits = None
         self._pending_swing = None
         self._in_mission = False
+        self._cancel_buttons = None
+        self._button_clock = StopWatch()
 
     def Swing_Attachments(self, x=90):
         """Repeatedly swing both attachments through an x-degree stroke.
@@ -205,6 +190,19 @@ class MasterRobot(DeltaBots):
         self.Stop_Swing()
         DeltaBots.Attachment_Reset(self, side, angle)
 
+    def Reset_Gyro(self, angle=0, timeout_ms=20000):
+        """Base reset behavior with cooperative CENTER cancellation."""
+        if not timeout_ms > 0:
+            raise ValueError('timeout_ms must be positive')
+        self.Stop_All(stop=Stop.COAST)
+        timer = StopWatch()
+        self.Wait(1000)
+        while not (self.hub.imu.ready() and self.hub.imu.stationary()):
+            self._deadline(timer, timeout_ms, 'Reset_Gyro')
+            self.Wait(self.loop_ms)
+        self.hub.imu.reset_heading(angle)
+        return self.Get_YAW_Angle(wrapped=False)
+
     def Beep(self, frequency=100, duration=1000, wait=False):
         """Play a timed tone; wait=False returns immediately (default).
 
@@ -232,6 +230,11 @@ class MasterRobot(DeltaBots):
 
     def Update(self):
         try:
+            if self._in_mission and self._cancel_buttons is not None:
+                event = self._cancel_buttons.update(
+                    self.hub.buttons.pressed(), self._button_clock.time())
+                if event == Button.CENTER:
+                    raise ProgramCancelled()
             if (self._tone_timer is not None
                     and self._tone_timer.time() >= self._tone_duration):
                 self.Stop_Sound()
@@ -270,15 +273,11 @@ def Show_Program_ID(bot, program_id):
 
 
 def Default_Program(bot, program_id, wait=False):
-    """Default program: show its ID and play a 1000 ms tone, with no motion.
-
-    Returns immediately by default so menu selection can continue.
-    ID 0 plays B4; IDs 1..9 follow C major from middle C (C4) through D5.
-    """
+    """Show ID and optionally play its configured automatic program tone."""
     Show_Program_ID(bot, program_id)
-    frequency = PROGRAM_TONES[program_id]
-    print('Program', program_id, '- tone:', frequency, 'Hz for 1 second')
-    bot.Beep(frequency=frequency, duration=1000, wait=wait)
+    if PROGRAM_BEEP_ENABLED:
+        bot.Beep(frequency=PROGRAM_TONES[program_id],
+                 duration=PROGRAM_BEEP_DURATION_MS, wait=wait)
 
 
 # ----- MENU ENGINE: TEAM MEMBERS NORMALLY LEAVE THIS SECTION UNCHANGED -----
@@ -326,14 +325,36 @@ class _ReleaseButtons:
         return None
 
 
+def _program_entry(selected):
+    entry = PROGRAMS[selected]
+    if len(entry) not in (2, 3):
+        raise ValueError('PROGRAMS entries need function, owner, optional swing')
+    function, owner = entry[0], entry[1]
+    swing = entry[2] if len(entry) == 3 else False
+    if not callable(function) or type(swing) is not bool:
+        raise ValueError('Program function must be callable; swing must be True/False')
+    return function, owner, swing
+
+
 def _validate_count(m):
     if type(m) is not int or not 1 <= m <= 10:
         raise ValueError('M must be an integer from 1 to 10')
     if len(PROGRAMS) < m:
         raise ValueError('PROGRAMS does not contain enough program slots')
-    for function, owner in PROGRAMS[:m]:
-        if not callable(function):
-            raise ValueError('Each program must contain a program function')
+    for selected in range(m):
+        _program_entry(selected)
+    if type(PROGRAM_BEEP_ENABLED) is not bool:
+        raise ValueError('PROGRAM_BEEP_ENABLED must be True/False')
+    if not 0 <= PROGRAM_BEEP_DURATION_MS < float('inf'):
+        raise ValueError('PROGRAM_BEEP_DURATION_MS must be finite and nonnegative')
+
+
+def _apply_selection(bot, selected, stroke=None):
+    """Called on selection transitions, never repeatedly by the idle loop."""
+    bot.Stop_Swing()
+    Show_Program_ID(bot, selected)
+    if selected != 0 and _program_entry(selected)[2]:
+        bot.Swing_Attachments(SWING_DEGREES if stroke is None else stroke)
 
 
 def _run_selected(bot, selected):
@@ -341,26 +362,38 @@ def _run_selected(bot, selected):
     if selected == 0:
         Program_0(bot)
         return False
-    function, owner = PROGRAMS[selected]
+    function, owner, swing = _program_entry(selected)
     print('Starting program', selected, '-', owner)
     pending_swing = None
+    succeeded = False
+    bot._cancel_buttons = _ReleaseButtons()
+    # Launch was triggered by a debounced release; require a fresh press.
+    # If called directly while a button is held, leave the detector disarmed.
+    if not bot.hub.buttons.pressed():
+        bot._cancel_buttons.raw = set()
+        bot._cancel_buttons.stable = set()
+        bot._cancel_buttons.armed = True
     bot._in_mission = True
     try:
+        Default_Program(bot, selected)
         function(bot)
-        # Keep custom gyro loops running until pending jobs have finished.
         bot.Wait_All(timeout_ms=FINISH_TIMEOUT_MS)
         pending_swing = bot._pending_swing
+        succeeded = True
         print('Program', selected, 'finished')
+    except ProgramCancelled:
+        bot.Stop_Sound()
+        print('Program', selected, 'cancelled; ready for selection')
     except Exception as error:
         bot.Stop_Sound()
         print('Program', selected, 'failed:', type(error).__name__, str(error))
     finally:
         bot._in_mission = False
-        # Cancel remaining jobs, including any continuous attachment commands.
+        bot._cancel_buttons = None
         bot.Stop_All(stop=Stop.BRAKE)
         Show_Program_ID(bot, selected)
-    if pending_swing is not None:
-        bot.Swing_Attachments(pending_swing)
+    if succeeded:
+        _apply_selection(bot, selected, pending_swing)
     return True
 
 
@@ -379,21 +412,19 @@ def main(m=M, default_program_id=None):
         # CENTER can launch missions; LEFT+RIGHT remains a firmware-level stop.
         bot.hub.system.set_stop_button((Button.LEFT, Button.RIGHT))
         bot.Stop_All(stop=Stop.BRAKE)
-        Show_Program_ID(bot, selected)
-        if SWING_ON_STARTUP:
-            bot.Swing_Attachments(SWING_DEGREES)
+        _apply_selection(bot, selected)
         print('DeltaBots selector: IDs 0 through', m - 1)
-        print('Release RIGHT/LEFT to select; release CENTER to run.')
+        print('Release RIGHT/LEFT to select; release CENTER to run/cancel.')
         print('Select ID 0 and release CENTER to quit.')
         print('Press LEFT+RIGHT together to stop the entire master.')
         while True:
             event = buttons.update(bot.hub.buttons.pressed(), timer.time())
             if event == Button.RIGHT:
                 selected = (selected + 1) % m
-                Show_Program_ID(bot, selected)
+                _apply_selection(bot, selected)
             elif event == Button.LEFT:
                 selected = (selected - 1) % m
-                Show_Program_ID(bot, selected)
+                _apply_selection(bot, selected)
             elif event == Button.CENTER:
                 if not _run_selected(bot, selected):
                     break
@@ -424,71 +455,71 @@ def Program_1(bot):
     The program ID does not determine which game missions it performs.
 
     Optional last line: bot.Swing_Attachments(x=90)
-    This starts loading/unloading motion after the mission has finished.
+    This custom stroke is used after success only if this LUT entry enables swing.
     """
-    Default_Program(bot, 1)
+    pass  # Add route commands or import and call your member function.
 
 
 def Program_2(bot):
     """ID 2 - Member 2. Add mission commands here."""
-    Default_Program(bot, 2)
+    pass  # Add route commands or import and call your member function.
 
 
 def Program_3(bot):
     """ID 3 - Member 3. Add mission commands here."""
-    Default_Program(bot, 3)
+    pass  # Add route commands or import and call your member function.
 
 
 def Program_4(bot):
     """ID 4 - Member 4. Add mission commands here."""
-    Default_Program(bot, 4)
+    pass  # Add route commands or import and call your member function.
 
 
 def Program_5(bot):
     """ID 5 - Member 5. Add mission commands here."""
-    Default_Program(bot, 5)
+    pass  # Add route commands or import and call your member function.
 
 
 def Program_6(bot):
     """ID 6 - Spare. Set M >= 7 to enable."""
-    Default_Program(bot, 6)
+    pass  # Add route commands or import and call your member function.
 
 
 def Program_7(bot):
     """ID 7 - Spare. Set M >= 8 to enable."""
-    Default_Program(bot, 7)
+    pass  # Add route commands or import and call your member function.
 
 
 def Program_8(bot):
     """ID 8 - Spare. Set M >= 9 to enable."""
-    Default_Program(bot, 8)
+    pass  # Add route commands or import and call your member function.
 
 
 def Program_9(bot):
-    """ID 9 - Spare. Set M = 10 to enable."""
+    """ID 9 - Robot self-inspection. Set M = 10 to enable."""
     from Robot_Self_Inspection import Robot_Self_Instpection
-    Default_Program(bot, 9)
     Robot_Self_Instpection(bot)
-    
 
 
 # ----- PROGRAM LOOKUP TABLE: TEAM MEMBERS EDIT OWNERS HERE -----
 # Position IS the displayed program ID, not an FLL mission number.
-# Each entry is (function, owner label). Repeating an owner is allowed.
+# Each entry is (function, owner label, swing_on_selection).
+# Set True for programs needing loading swing; False is the default.
+# Repeating an owner is allowed. Legacy (function, owner) entries mean False.
 # Example assignment only: Program_1 and Program_6 could both belong to Member 1.
 # List FLL mission IDs/order in the corresponding program's comments/docstring.
 # Do not call functions here. ID 0 stays reserved for quitting.
 PROGRAMS = (
-    (Program_0, 'Quit'),
-    (Program_1, 'Member 1'),
-    (Program_2, 'Member 2'),
-    (Program_3, 'Member 3'),
-    (Program_4, 'Member 4'),
-    (Program_5, 'Member 5'),
-    (Program_6, 'Unassigned'),
-    (Program_7, 'Unassigned'),
-    (Program_8, 'Unassigned'),
-    (Program_9, 'Self_Inspection'),
+    (Program_0, 'Quit', False),
+    (Program_1, 'Member 1', False),
+    (Program_2, 'Member 2', False),
+    (Program_3, 'Member 3', False),
+    (Program_4, 'Member 4', False),
+    (Program_5, 'Member 5', False),
+    (Program_6, 'Unassigned', False),
+    (Program_7, 'Unassigned', False),
+    (Program_8, 'Unassigned', False),
+    (Program_9, 'Robot_self_inspection', True),
 )
 
 
