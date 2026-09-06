@@ -85,6 +85,7 @@ class BaseRobot:
         distance,
         speed,
         then=Stop.BRAKE,
+        wait=True,
         gyro=True,
         accel=STRAIGHT_ACCEL,
         decel=STRAIGHT_DECEL,
