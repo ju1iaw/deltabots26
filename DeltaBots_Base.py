@@ -61,8 +61,10 @@ mission-level finally block if attachments may be running concurrently.
 Nonblocking Attachment_Run requires an explicit Attachment_Stop/Stop_All.
 Timeouts do not prove stall detection; wheel slip cannot be inferred from
 encoders. Motor speed/acceleration and controller gains require field tuning.
-This module owns drive motors directly: do not also create a DriveBase using
-them. This avoids conflicts between custom pivot control and DriveBase.
+Move_Straight uses an internal native DriveBase with IMU enabled. It holds
+the starting heading; use Gyro_Turn first to face a different direction.
+The module releases native control before custom drive or pivot commands.
+Do not create another DriveBase using this robot's drive motors.
 
 Suggested first checks: wheels lifted for direction/port checks, then low
 speed +/-90 and +/-355 turns for every pivot, 300 mm forward/reverse,
@@ -157,6 +159,8 @@ class DeltaBots:
         self.loop_ms = loop_ms
         self._tasks = {}
         self._scheduler_clock = StopWatch()
+        self._native_drive = None  # Created only when Move_Straight is used.
+        self._native_drive_active = False
 
     def _cancel(self, resource):
         task = self._tasks.pop(resource, None)
@@ -254,8 +258,16 @@ class DeltaBots:
 
     def _stop_drive(self, stop=Stop.BRAKE):
         _mode(stop)
+        self._release_native_drive()
         _stop_motor(self.leftDriveMotor, stop)
         _stop_motor(self.rightDriveMotor, stop)
+
+    def _release_native_drive(self):
+        # Stop native control (including a completed HOLD) before individual
+        # motor commands. Do this once per handoff, never every control tick.
+        if self._native_drive_active:
+            self._native_drive.stop()
+            self._native_drive_active = False
 
     def Stop_All(self, stop=Stop.BRAKE):
         """Stop drive wheels and both attachments with explicit stop mode."""
@@ -266,6 +278,7 @@ class DeltaBots:
         _stop_motor(self.rightAttachmentMotor, stop)
 
     def _tank(self, left, right):
+        self._release_native_drive()
         # Inputs are wheel-ground speeds in mm/s. Scale both together to
         # preserve curvature when requested motor speeds exceed our limit.
         left /= self.mm_per_degree
@@ -388,20 +401,26 @@ class DeltaBots:
 
     def Gyro_Move(self, direction=None, distance=100, velocity=150,
                   acceleration=200, deceleration=400, stop=Stop.BRAKE,
-                  timeout_ms=DEFAULT_TIMEOUT_MS, tolerance=2, heading_kp=3,
-                  max_turn_rate=60, distance_kp=4, wait=True):
+                  timeout_ms=DEFAULT_TIMEOUT_MS, tolerance=2, heading_kp=1.5,
+                  max_turn_rate=60, distance_kp=4, wait=True,
+                  heading_kd=0.5, turn_acceleration=120):
         """Drive signed mm along heading; wait=False starts concurrent control.
 
         direction=None holds starting heading. Driving units mm/s, mm/s^2.
         Returns travel if blocking, otherwise a MotionTask handle.
+        Steering uses heading_kp * heading_error - heading_kd * yaw_rate.
+        The yaw rate is estimated from heading and filtered over 50 ms.
+        heading_kd >= 0 damps steering; turn_acceleration (deg/s^2) limits
+        changes in steering rate. These defaults need testing on your robot.
+        Existing positional arguments keep their meaning; new options are last.
         """
         return self._start('drive', self._gyro_move(direction, distance, velocity,
             acceleration, deceleration, stop, timeout_ms, tolerance, heading_kp,
-            max_turn_rate, distance_kp), wait)
+            max_turn_rate, distance_kp, heading_kd, turn_acceleration), wait)
 
     def _gyro_move(self, direction, distance, velocity, acceleration,
                    deceleration, stop, timeout_ms, tolerance, heading_kp,
-                   max_turn_rate, distance_kp):
+                   max_turn_rate, distance_kp, heading_kd, turn_acceleration):
         """Drive signed mm while maintaining direction (None=current yaw).
 
         Velocity is a positive magnitude in mm/s. Distance controls reverse.
@@ -412,9 +431,18 @@ class DeltaBots:
         for v, n in ((velocity, 'velocity'), (acceleration, 'acceleration'),
                      (deceleration, 'deceleration'), (timeout_ms, 'timeout_ms'),
                      (tolerance, 'tolerance'), (heading_kp, 'heading_kp'),
-                     (max_turn_rate, 'max_turn_rate'), (distance_kp, 'distance_kp')):
+                     (max_turn_rate, 'max_turn_rate'), (distance_kp, 'distance_kp'),
+                     (turn_acceleration, 'turn_acceleration')):
             _positive(v, n)
-        target_heading = self.Get_YAW_Angle(False) if direction is None else direction
+        if not 0 <= heading_kd < float('inf'):
+            raise ValueError('heading_kd must be finite and nonnegative')
+        previous_heading = self.Get_YAW_Angle(False)
+        target_heading = previous_heading if direction is None else direction
+        yaw_rate = 0
+        correction = 0
+        # Prevent the linear ramp from building an unreachable speed while
+        # _tank silently scales the wheel commands down to the motor limit.
+        velocity = min(velocity, self.max_motor_speed * self.mm_per_degree)
         start = self.Get_Distance()
         timer = StopWatch()
         last_time = 0
@@ -427,10 +455,15 @@ class DeltaBots:
                 now = timer.time()
                 dt = max(1, now - last_time) / 1000
                 last_time = now
+                heading = self.Get_YAW_Angle(False)
+                measured_rate = _wrap(heading - previous_heading) / dt
+                previous_heading = heading
+                yaw_rate += dt / (0.05 + dt) * (measured_rate - yaw_rate)
                 error = distance - (self.Get_Distance() - start)
                 if abs(error) <= tolerance:
                     self._stop_drive(Stop.BRAKE)
                     speed = 0
+                    correction = 0
                     stable += 1
                     if stable >= 3:
                         break
@@ -440,13 +473,76 @@ class DeltaBots:
                     desired *= 1 if error > 0 else -1
                     limit = acceleration if desired * speed >= 0 and abs(desired) > abs(speed) else deceleration
                     speed += _clip(desired - speed, limit * dt)
-                    correction = _clip(heading_kp * _wrap(target_heading - self.Get_YAW_Angle(False)), max_turn_rate)
+                    # Damping opposes actual turning, including in reverse.
+                    # Differentiate measured heading, not the target, to avoid
+                    # a derivative kick when a new direction is requested.
+                    desired_correction = _clip(
+                        heading_kp * _wrap(target_heading - heading)
+                        - heading_kd * yaw_rate, max_turn_rate)
+                    correction += _clip(desired_correction - correction,
+                                        turn_acceleration * dt)
                     self._drive(speed, correction)
                 yield
         except BaseException:
             self._stop_drive(Stop.BRAKE)
             raise
         self._stop_drive(stop)
+        return self.Get_Distance() - start
+
+    def Move_Straight(self, distance=100, velocity=150, acceleration=200,
+                      deceleration=400, stop=Stop.BRAKE,
+                      timeout_ms=DEFAULT_TIMEOUT_MS, wait=True):
+        """Native DriveBase distance driving with IMU enabled.
+
+        Holds the heading at the start of this call; does not reset the gyro
+        or turn to a supplied direction. Positive distance moves forward,
+        negative moves backward. Velocity is positive mm/s; acceleration
+        and deceleration are positive mm/s^2. Uses native stopping criteria.
+
+        Default wait=True returns actual signed encoder travel in mm after
+        completion. Master cancellation remains responsive while waiting.
+        Optional wait=False returns a MotionTask; use Wait/Wait_All as usual.
+        Shares the drive resource with Gyro_Move, Gyro_Turn and Stop_Line.
+        """
+        return self._start('drive', self._move_straight(distance, velocity,
+            acceleration, deceleration, stop, timeout_ms), wait)
+
+    def _move_straight(self, distance, velocity, acceleration, deceleration,
+                       stop, timeout_ms):
+        _mode(stop)
+        if not -float('inf') < distance < float('inf'):
+            raise ValueError('distance must be finite')
+        for value, name in ((velocity, 'velocity'),
+                            (acceleration, 'acceleration'),
+                            (deceleration, 'deceleration'),
+                            (timeout_ms, 'timeout_ms')):
+            if not 0 < value < float('inf'):
+                raise ValueError(name + ' must be finite and positive')
+        timer = StopWatch()
+        start = self.Get_Distance()
+        try:
+            self._stop_drive(Stop.BRAKE)
+            if self._native_drive is None:
+                from pybricks.robotics import DriveBase
+                self._native_drive = DriveBase(
+                    self.leftDriveMotor, self.rightDriveMotor,
+                    self.wheel_diameter, self.axle_track)
+            drive = self._native_drive
+            drive.use_gyro(True)  # Also releases the preceding native target.
+            drive.settings(
+                straight_speed=min(velocity, self.max_motor_speed * self.mm_per_degree),
+                straight_acceleration=(acceleration, deceleration))
+            self._native_drive_active = True
+            # Native firmware controls the motors; Python only monitors
+            # completion/deadline so menu cancellation still gets serviced.
+            drive.straight(distance, then=stop, wait=False)
+            while not drive.done():
+                self._deadline(timer, timeout_ms, 'Move_Straight')
+                yield
+        except BaseException:
+            self._stop_drive(Stop.BRAKE)
+            raise
+        # Preserve native then=stop, including gyro HOLD until the next move.
         return self.Get_Distance() - start
 
     def Drive_Time(self, millis, velocity=100, direction=None, stop=Stop.BRAKE,
