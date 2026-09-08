@@ -401,7 +401,7 @@ class DeltaBots:
 
     def Gyro_Move(self, direction=None, distance=100, velocity=150,
                   acceleration=200, deceleration=400, stop=Stop.BRAKE,
-                  timeout_ms=DEFAULT_TIMEOUT_MS, tolerance=2, heading_kp=1.5,
+                  timeout_ms=DEFAULT_TIMEOUT_MS, tolerance=2, heading_kp=5.0,
                   max_turn_rate=60, distance_kp=4, wait=True,
                   heading_kd=0.5, turn_acceleration=120):
         """Drive signed mm along heading; wait=False starts concurrent control.
