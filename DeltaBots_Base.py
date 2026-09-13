@@ -297,18 +297,26 @@ class DeltaBots:
         return (self.leftDriveMotor.angle() + self.rightDriveMotor.angle()) * self.mm_per_degree / 2
 
 
-    def Reset_Gyro(self, angle=0, timeout_ms=DEFAULT_TIMEOUT_MS):
-        """Coast all motors, wait for ready/stationary IMU, reset yaw.
+    def Reset_Gyro(self, angle=0, timeout_ms=DEFAULT_TIMEOUT_MS, delay_ms=0):
+        """Coast motors, optionally settle, require ready/stationary IMU.
 
+        delay_ms=0 adds no fixed delay. The timeout includes the optional
+        delay and readiness wait. self.Wait keeps master cancellation active.
         Rest loaded attachments on supports before calling: motors release.
         """
-        _positive(timeout_ms, 'timeout_ms')
+        if not 0 < timeout_ms < float('inf'):
+            raise ValueError('timeout_ms must be finite and positive')
+        if not 0 <= delay_ms < float('inf'):
+            raise ValueError('delay_ms must be finite and nonnegative')
         self.Stop_All(stop=Stop.COAST)
         timer = StopWatch()
-        wait(1000)
-        while not (self.hub.imu.ready() and self.hub.imu.stationary()):
+        self.Wait(0)  # Service cancellation even if no waiting is needed.
+        while True:
             self._deadline(timer, timeout_ms, 'Reset_Gyro')
-            wait(self.loop_ms)
+            if (timer.time() >= delay_ms and self.hub.imu.ready()
+                    and self.hub.imu.stationary()):
+                break
+            self.Wait(min(self.loop_ms, max(1, timeout_ms - timer.time())))
         self.hub.imu.reset_heading(angle)
         return self.Get_YAW_Angle(wrapped=False)
 

@@ -16,7 +16,7 @@ DURING A PROGRAM:
   LEFT+RIGHT remains the firmware stop combination for the entire master.
 
 Cancellation is cooperative: bot.Update(), bot.Wait(), finite base movement
-calls, and this class's Reset_Gyro service button events. Raw sleeps, blocking
+calls, and the inherited Reset_Gyro service button events. Raw sleeps, blocking
 motor calls, or long Python loops delay cancellation. Use bot.Wait(ms) for
 pauses and call bot.Update() regularly in custom loops. Do not catch
 BaseException in a route except to clean up and re-raise it.
@@ -61,8 +61,8 @@ SWING_ACCELERATION_FACTOR = 1.5  # 50% above pre-swing acceleration/deceleration
 POLL_MS = 10
 DEBOUNCE_MS = 30
 FINISH_TIMEOUT_MS = 20000    # Wait for remaining wait=False jobs after return.
-PROGRAM_BEEP_ENABLED = True # False disables automatic start/exit tones.
-PROGRAM_BEEP_DURATION_MS = 2000
+PROGRAM_BEEP_ENABLED = False # False disables automatic start/exit tones.
+PROGRAM_BEEP_DURATION_MS = 0
 TONE_VOLUME = 30            # Speaker volume in percent, 0..100.
 PROGRAM_TONES = (494, 262, 294, 330, 349, 392, 440, 494, 523, 587)
 # B4 (quit), C4, D4, E4, F4, G4, A4, B4, C5, D5; rounded Hz, A4 = 440 Hz.
@@ -189,19 +189,6 @@ class MasterRobot(DeltaBots):
     def Attachment_Reset(self, side, angle=0):
         self.Stop_Swing()
         DeltaBots.Attachment_Reset(self, side, angle)
-
-    def Reset_Gyro(self, angle=0, timeout_ms=20000):
-        """Base reset behavior with cooperative CENTER cancellation."""
-        if not timeout_ms > 0:
-            raise ValueError('timeout_ms must be positive')
-        self.Stop_All(stop=Stop.COAST)
-        timer = StopWatch()
-        self.Wait(1000)
-        while not (self.hub.imu.ready() and self.hub.imu.stationary()):
-            self._deadline(timer, timeout_ms, 'Reset_Gyro')
-            self.Wait(self.loop_ms)
-        self.hub.imu.reset_heading(angle)
-        return self.Get_YAW_Angle(wrapped=False)
 
     def Beep(self, frequency=100, duration=1000, wait=False):
         """Play a timed tone; wait=False returns immediately (default).
@@ -375,7 +362,7 @@ def _run_selected(bot, selected):
         bot._cancel_buttons.armed = True
     bot._in_mission = True
     try:
-        Default_Program(bot, selected)
+        Default_Program(bot, selected, wait=False)
         function(bot)
         bot.Wait_All(timeout_ms=FINISH_TIMEOUT_MS)
         pending_swing = bot._pending_swing
