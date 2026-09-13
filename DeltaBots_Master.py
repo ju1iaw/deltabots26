@@ -492,7 +492,8 @@ def Program_7(bot):
 
 def Program_8(bot):
     """ID 8 - Spare. Set M >= 9 to enable."""
-    pass  # Add route commands or import and call your member function.
+    from Peng_Test import Peng_Test
+    Peng_Test(bot)
 
 
 def Program_9(bot):
@@ -511,14 +512,14 @@ def Program_9(bot):
 # Do not call functions here. ID 0 stays reserved for quitting.
 PROGRAMS = (
     (Program_0, 'Quit', False),
-    (Program_1, 'Member 1', False),
-    (Program_2, 'Member 2', False),
-    (Program_3, 'Member 3', False),
-    (Program_4, 'Member 4', False),
-    (Program_5, 'Member 5', False),
+    (Program_1, 'Delina 1', False),
+    (Program_2, 'Richard 2', False),
+    (Program_3, 'Alyssa 3', False),
+    (Program_4, 'Justin 4', False),
+    (Program_5, 'Michael 5', False),
     (Program_6, 'Unassigned', False),
     (Program_7, 'Unassigned', False),
-    (Program_8, 'Unassigned', False),
+    (Program_8, 'Peng_Test', False),
     (Program_9, 'Robot_self_inspection', True),
 )
 
