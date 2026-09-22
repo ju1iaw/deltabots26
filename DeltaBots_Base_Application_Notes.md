@@ -67,6 +67,14 @@ This says: **“The direction the robot faces now is 0°.”** It does not turn 
 
 Place the robot in its intended starting direction and keep it still. This function releases all motors while it waits for the IMU, so support any attachment that depends on the motor holding it up.
 
+The default `delay_ms=0` adds no fixed settling delay. The IMU must still be ready and stationary, so the call may wait. To request an extra settling period:
+
+```python
+bot.Reset_Gyro(angle=0, delay_ms=1000)
+```
+
+The default timeout is 20000 ms and includes the optional delay. The master inherits this same base method, including cooperative CENTER cancellation. Reset is not automatic when a program starts; the route decides whether to call it.
+
 Normally call it once at the beginning of a route. Resetting it again changes what all later direction numbers mean.
 
 ### 2 — Gyro_Move: drive while facing a direction
@@ -490,7 +498,7 @@ The examples deliberately keep the commonly changed parameters visible. Other pa
 
 | Function | Additional defaults and behavior |
 |---|---|
-| `Reset_Gyro` | `angle=0`, timeout 20000 ms. Coasts all motors, waits one second, then requires IMU ready and stationary. Returns accumulated heading. It resets the heading reference, not the physical robot pose. |
+| `Reset_Gyro` | `angle=0`, `delay_ms=0`, timeout 20000 ms. Coasts all motors, waits for any requested delay, then requires IMU ready and stationary. The timeout includes both waits. Returns accumulated heading. It resets the heading reference, not the physical robot pose. |
 | `Gyro_Move` | `direction=None` holds starting heading; `distance=100`, velocity 150, acceleration 200, deceleration 400. Distance tolerance 2 mm; heading gain 1.5; damping 0.5; yaw-rate filter time constant 50 ms; steering acceleration 120 deg/s²; correction cap 60 deg/s; distance gain 4. Returns signed encoder travel. |
 | `Move_Straight` | Native IMU drive along starting heading. Distance 100 mm, velocity 150 mm/s, acceleration 200 and deceleration 400 mm/s². Native completion criteria; no custom heading gains or tolerance argument. Returns signed encoder travel. |
 | `Wait` | Required `millis` argument; services tasks for that duration. Does not wait for movement completion or stop unfinished tasks. |
@@ -558,7 +566,7 @@ Get_Distance()
 ```
 
 ```text
-Reset_Gyro(angle=0, timeout_ms=DEFAULT_TIMEOUT_MS)
+Reset_Gyro(angle=0, timeout_ms=DEFAULT_TIMEOUT_MS, delay_ms=0)
 ```
 
 ```text
