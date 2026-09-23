@@ -54,7 +54,7 @@ class BaseRobot:
         self.colorSensorLeft = ColorSensor(Port.C)
         self.colorSensorRight = ColorSensor(Port.D)
 
-    # Write all of the functions that your robot will need to do.
+0    # Write all of the functions that your robot will need to do.
 
     def moveLeftAttachmentMotorForMillis(
         self,

@@ -52,6 +52,8 @@ from DeltaBots_Base import DeltaBots, Stop, MotionTimeout
 from pybricks.parameters import Button
 from pybricks.tools import StopWatch
 
+import richardfll
+
 
 # ----- TEAM CONFIGURATION -----
 M = 10                      # Number of selectable programs: integer 1..10 (IDs 0..9).
@@ -449,7 +451,8 @@ def Program_1(bot):
 
 def Program_2(bot):
     """ID 2 - Member 2. Add mission commands here."""
-    pass  # Add route commands or import and call your member function.
+    br = DeltaBots()
+    richardfll.mission8_9(br)
 
 
 def Program_3(bot):
