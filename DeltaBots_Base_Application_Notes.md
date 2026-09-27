@@ -97,40 +97,40 @@ bot.Gyro_Move(direction=0, distance=-500, velocity=150,
 |---|---|
 | `direction` | Heading to face while moving; `None` holds the starting heading. |
 | `distance` | How far to move: positive forward, negative backward. |
-| `velocity` | Distance mode: positive speed. Timed mode: positive forward, negative backward (nonzero). |
-| `time_ms` | Optional duration in milliseconds; default `None` selects distance mode. When set, distance is ignored. |
+| `velocity` | Positive maximum driving speed; distance sign selects forward/backward. |
+| `time_ms` | Optional time limit in milliseconds; stop at distance or time, whichever comes first. Default `None` adds no time limit. |
 | `acceleration` | How quickly the requested driving speed increases, in mm/s². |
 | `deceleration` | How quickly the requested driving speed decreases, in mm/s²; default 400. |
 | `stop` | How to stop at the end. |
 | `wait` | Whether to finish this movement before continuing. |
 
-#### Timed driving (new optional mode)
+#### Stop at the distance or time limit, whichever comes first
 
 Existing calls and positional arguments keep their original meaning. Omit
-`time_ms`, or use `time_ms=None`, for distance-based movement.
+`time_ms`, or use `time_ms=None`, for distance-only completion.
 
 ```python
-# Forward for 3 seconds, holding heading 0 degrees.
-bot.Gyro_Move(direction=0, time_ms=3000, velocity=150)
+# Forward up to 500 mm, but stop after at most 3 seconds.
+bot.Gyro_Move(direction=0, distance=500, time_ms=3000, velocity=150)
 
-# Backward for 3 seconds, still holding heading 0 degrees.
-bot.Gyro_Move(direction=0, time_ms=3000, velocity=-150)
+# Backward up to 500 mm, with the same time limit.
+bot.Gyro_Move(direction=0, distance=-500, time_ms=3000, velocity=150)
 
-# Concurrent timed movement; service the controller while it runs.
-move = bot.Gyro_Move(time_ms=2000, velocity=100, wait=False)
+# Concurrent movement; service the controller while it runs.
+move = bot.Gyro_Move(distance=500, time_ms=2000, velocity=100, wait=False)
 bot.Wait_All()
 print(move.result)  # Actual signed encoder travel in mm.
 ```
 
-- `time_ms` selects timed mode and **ignores distance**, including an explicitly supplied distance. Use the velocity sign to choose forward/backward.
-- Duration includes acceleration and deceleration. The controller ramps up, then limits speed according to the time remaining to ramp down. Short runs may never reach the requested speed. Physical travel is not simply velocity multiplied by duration.
-- The selected stop mode is applied on the first controller update at or after the duration. Nominal resolution is `loop_ms` (10 ms by default); physical stopping depends on the robot and stop mode.
-- Duration must be finite, nonnegative, and no greater than `timeout_ms`. `time_ms=0` stops without driving. Timed velocity must be finite and nonzero.
-- For more than 20 seconds, increase `timeout_ms`, for example `bot.Gyro_Move(time_ms=30000, velocity=100, timeout_ms=35000)`. Also increase `Wait_All` or the master's joining timeout if those waits must cover a long nonblocking movement.
-- Timed mode uses the same heading controller, damping, speed cap, and cooperative task handling as distance mode. `tolerance` and `distance_kp` do not determine timed completion; leave their positive defaults in place.
-- Blocking calls return actual signed encoder travel; nonblocking calls return a `MotionTask`. Use bot waiting methods or frequent `Update()` calls; ordinary sleeps delay controller updates and stopping.
+- Both the distance target and time limit remain active. Distance completion retains the existing three consecutive readings within `tolerance`; the robot brakes during this check.
+- Velocity stays positive. Use negative **distance** for backward motion, with or without a time limit. If distance is omitted, the existing default of 100 mm still applies.
+- The time limit includes acceleration and settling. Expiry is normal completion, with no `MotionTimeout` exception. The result is actual signed encoder travel, even if the target was not reached.
+- Normal distance-based acceleration/deceleration is unchanged. At time expiry the selected stop mode is applied on the first controller update, without adding a deceleration period. Nominal resolution is `loop_ms` (10 ms by default); physical stopping depends on the robot and stop mode.
+- The limit must be finite, nonnegative, and no greater than `timeout_ms`. `time_ms=0` stops without driving. For limits above 20 seconds, increase `timeout_ms` too. Equal time and timeout limits finish normally. With no `time_ms`, the existing failure timeout still applies.
+- Heading control, damping, speed cap, and cooperative task handling are unchanged. For long concurrent runs, also increase `Wait_All` or the master's joining timeout when needed.
+- Blocking calls return actual travel; nonblocking calls return a `MotionTask`. Use bot waiting methods or frequent `Update()` calls; ordinary sleeps delay controller updates and stopping.
 
-No change to `DeltaBots_Master.py` is needed when it inherits `Gyro_Move` from this base. The older `Drive_Time()` remains available unchanged.
+This replaces the earlier time-only option: distance is no longer ignored, and negative velocity is not used for reverse. No change to `DeltaBots_Master.py` is needed when it inherits the base method. The older `Drive_Time()` remains available unchanged.
 
 **Turn toward the desired direction first.** This function holds a heading; it is not a command to drive to a location on the mat.
 
@@ -192,6 +192,31 @@ A wheel-pivot turn also shifts the robot’s center. Account for that when plann
 `absolute=True` uses an accumulated heading target, not a shortest-path compass target. From accumulated +170° to absolute -170°, the commanded rotation is -340°. The difference between target and starting heading must still be within ±355°. Read accumulated heading with `Get_YAW_Angle(wrapped=False)`.
 
 For example, to face wrapped heading -90° from heading 180°, a relative +90° turn reaches 270°, which wraps to -90°. Passing -90 without `absolute=True` would instead turn from 180° to 90°.
+
+#### Stop at the angle or time limit, whichever comes first
+
+```python
+# Turn clockwise up to 90 degrees, but stop after at most 1 second.
+heading = bot.Gyro_Turn(90, velocity=90, time_ms=1000)
+
+# Counterclockwise, with the same time limit.
+bot.Gyro_Turn(-90, velocity=90, time_ms=1000)
+
+# Also works for absolute targets, wheel pivots, and concurrent operation.
+turn = bot.Gyro_Turn(90, absolute=True, pivot=-1,
+                     time_ms=1500, wait=False)
+bot.Wait_All()
+print(turn.result)  # Actual final accumulated heading, not the target.
+```
+
+- `time_ms=None` (default) preserves existing angle-based behavior and all existing positional arguments.
+- With `time_ms` set, **both angle and time are active stop conditions**. Angle completion retains the existing tolerance and settling check: three consecutive readings within tolerance with measured turn rate below 5 degrees/s. The robot brakes while checking settling.
+- The time limit starts when the turn starts and includes acceleration and settling. Expiry is normal completion, with no `MotionTimeout` exception. The function returns the actual accumulated heading even if it stopped short of the target.
+- At expiry the requested `stop` mode is applied immediately on the next controller update, without adding a deceleration period. Normal angle-based acceleration/deceleration remains unchanged. Physical stopping still depends on the robot and stop mode.
+- `time_ms` must be finite, nonnegative, and no greater than `timeout_ms`; zero stops without turning. For limits above 20 seconds, increase `timeout_ms` too. If both limits are equal, time expiry is treated as normal completion.
+- `timeout_ms` remains a failure deadline when no time limit is supplied. `wait=False` still requires bot waiting methods or frequent `Update()` calls; blocked updates delay stopping and cancellation.
+
+Both `Gyro_Move(time_ms=...)` and `Gyro_Turn(time_ms=...)` retain their distance or angle targets and stop at the target or time limit, whichever comes first. No Master change is needed when it inherits the base method.
 
 ### 4 — Stop_Line: move until a color sensor finds a line
 
@@ -528,11 +553,11 @@ The examples deliberately keep the commonly changed parameters visible. Other pa
 | Function | Additional defaults and behavior |
 |---|---|
 | `Reset_Gyro` | `angle=0`, `delay_ms=0`, timeout 20000 ms. Coasts all motors, waits for any requested delay, then requires IMU ready and stationary. The timeout includes both waits. Returns accumulated heading. It resets the heading reference, not the physical robot pose. |
-| `Gyro_Move` | `direction=None` holds starting heading; `distance=100`, velocity 150, acceleration 200, deceleration 400. `time_ms=None` selects distance; a duration selects timed travel with signed velocity and ignores distance. Distance tolerance 2 mm; heading gain 5.0; damping 0.5; yaw-rate filter time constant 50 ms; steering acceleration 120 deg/s²; correction cap 60 deg/s; distance gain 4. Returns signed encoder travel. |
+| `Gyro_Move` | `direction=None` holds starting heading; `distance=100`, velocity 150, acceleration 200, deceleration 400. `time_ms=None` adds no time limit; when set, stop at distance or time expiry, whichever is earlier. Velocity stays positive and signed distance selects travel direction. Distance tolerance 2 mm; heading gain 5.0; damping 0.5; yaw-rate filter time constant 50 ms; steering acceleration 120 deg/s²; correction cap 60 deg/s; distance gain 4. Returns signed encoder travel. |
 | `Move_Straight` | Native IMU drive along starting heading. Distance 100 mm, velocity 150 mm/s, acceleration 200 and deceleration 400 mm/s². Native completion criteria; no custom heading gains or tolerance argument. Returns signed encoder travel. |
 | `Wait` | Required `millis` argument; services tasks for that duration. Does not wait for movement completion or stop unfinished tasks. |
 | `Wait_All` | Timeout 20000 ms from this call; services all tracked finite tasks until finished. Does not wait for continuous attachment rotation. |
-| `Gyro_Turn` | `absolute=False` is relative; `absolute=True` targets accumulated heading. Otherwise pivot 0, velocity 90, acceleration 200, deceleration 300, tolerance 1°, gain 3. Returns final accumulated heading. |
+| `Gyro_Turn` | `absolute=False` is relative; `absolute=True` targets accumulated heading. Otherwise pivot 0, velocity 90, acceleration 200, deceleration 300, tolerance 1°, gain 3. Optional `time_ms=None`; when set, stop at settled angle or time expiry, whichever is earlier. Returns actual final accumulated heading. |
 | `Stop_Line` | Sensor 0, velocity 80, reflectance 50, both mode `'all'`, `stop_below=True`, 3 consecutive samples, maximum travel 1000 mm, reflectance tolerance 2, fine speed 30 mm/s, alignment gain 1.5. Returns both final reflectances. |
 | `Attachment_Angle` / `Attachment_Target` | Velocity 300 deg/s, stop HOLD, timeout 20000 ms, wait True. Return final encoder angle. |
 | `Attachment_Time` | Same defaults; duration must be positive and no greater than timeout. Returns final encoder angle. |
@@ -603,7 +628,7 @@ Get_YAW_Angle(wrapped=True)
 ```
 
 ```text
-Gyro_Turn(angle, pivot=0, velocity=90, acceleration=200, deceleration=300, tolerance=1, stop=Stop.BRAKE, timeout_ms=DEFAULT_TIMEOUT_MS, absolute=False, kp=3, wait=True)
+Gyro_Turn(angle, pivot=0, velocity=90, acceleration=200, deceleration=300, tolerance=1, stop=Stop.BRAKE, timeout_ms=DEFAULT_TIMEOUT_MS, absolute=False, kp=3, wait=True, time_ms=None)
 ```
 
 ```text
