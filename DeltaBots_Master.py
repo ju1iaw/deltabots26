@@ -52,7 +52,7 @@ from DeltaBots_Base import DeltaBots, Stop, MotionTimeout
 from pybricks.parameters import Button
 from pybricks.tools import StopWatch
 
-import richardfll
+import Program3_Richard
 
 
 # ----- TEAM CONFIGURATION -----
@@ -452,7 +452,7 @@ def Program_1(bot):
 def Program_2(bot):
     """ID 2 - Member 2. Add mission commands here."""
     br = DeltaBots()
-    richardfll.mission8_9(br)
+    Program3_Richard.mission8_9(br)
 
 
 def Program_3(bot):

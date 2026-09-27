@@ -1,14 +1,18 @@
+# Program 3
+# Owner: Richard
+# Missions, in execution order: Mission 9, Mission 8
+
 from pybricks.tools import wait
 from DeltaBots_Base import *
 bot=DeltaBots
 
 def mission8_9(Bot: DeltaBots):
 #_____________________________________
-    Bot.Attachment_Time(1,400,-500)
+    Bot.Attachment_Time(1,400,-500, wait=True)
     # Bot.Attachment_Time(-1,2300, -7000)
     # Bot.Attachment_Time(-1,2300, 7000)
-    Bot.Attachment_Time(1,700,500)
-    Bot.Gyro_Move(30,670,150)
+    Bot.Attachment_Time(1,680,500, wait=False)
+    Bot.Gyro_Move(30,670,250)
     Bot.Gyro_Move(40,60,250)
     Bot.Gyro_Turn(-40,0,300)
     Bot.Gyro_Move(0,90,150)
@@ -24,11 +28,13 @@ def mission8_9(Bot: DeltaBots):
 #_________________________________________ do not delete
     Bot.Attachment_Angle(1,-225,300)
     Bot.Attachment_Angle(1,80,300)
-    Bot.Gyro_Move(18,-160,200)
+    Bot.Gyro_Move(20,-130,300)
     Bot.Attachment_Angle(1,-325,300)
-    Bot.Gyro_Move(0,200,200)
-    Bot.Attachment_Angle(-1, -1630 ,300)
+    Bot.Gyro_Move(0 ,120,200)
+    Bot.Attachment_Angle(-1, -1650 ,600)
     print('attachment -1900 done')
+    # Bot.Gyro_Turn(20,0,300)
+    # Bot.Gyro_Turn(-20,0,300)
     # Bot.Gyro_Move(0,-50,150)
     # Bot.Attachment_Angle(-1, 1500 ,300)
     # Bot.Gyro_Turn(30,0,200)
