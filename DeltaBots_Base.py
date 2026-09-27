@@ -327,17 +327,24 @@ class DeltaBots:
 
     def Gyro_Turn(self, angle, pivot=0, velocity=90, acceleration=200,
                   deceleration=300, tolerance=1, stop=Stop.BRAKE,
-                  timeout_ms=DEFAULT_TIMEOUT_MS, absolute=False, kp=3, wait=True):
+                  timeout_ms=DEFAULT_TIMEOUT_MS, absolute=False, kp=3, wait=True,
+                  time_ms=None):
         """Relative/absolute gyro turn; wait=False starts concurrent control.
 
         pivot: any finite value; -1 left wheel, 0 center, +1 right wheel.
+        time_ms=None preserves angle-only completion. Otherwise stop normally
+        when the angle settles OR time_ms expires, whichever happens first.
+        time_ms must be finite, nonnegative, and <= timeout_ms. Zero stops
+        immediately. Time expiry applies stop without extra ramp-down time.
+        Returns actual accumulated heading, including on early timed stops.
         Use Wait/Wait_All/Update to service the nonblocking controller.
         """
         return self._start('drive', self._gyro_turn(angle, pivot, velocity,
-            acceleration, deceleration, tolerance, stop, timeout_ms, absolute, kp), wait)
+            acceleration, deceleration, tolerance, stop, timeout_ms, absolute, kp,
+            time_ms), wait)
 
     def _gyro_turn(self, angle, pivot, velocity, acceleration, deceleration,
-                   tolerance, stop, timeout_ms, absolute, kp):
+                   tolerance, stop, timeout_ms, absolute, kp, time_ms=None):
         """Turn signed degrees; pivot -1=left, 0=center, +1=right.
 
         Any finite pivot is supported, including fractional values.
@@ -351,6 +358,13 @@ class DeltaBots:
         controller limits. Three stable samples within tolerance finish.
         """
         _mode(stop)
+        if time_ms is not None:
+            if not 0 <= time_ms < float('inf'):
+                raise ValueError('time_ms must be finite and nonnegative')
+            if not 0 < timeout_ms < float('inf'):
+                raise ValueError('timeout_ms must be finite and positive')
+            if time_ms > timeout_ms:
+                raise ValueError('time_ms must not exceed timeout_ms')
         for v, n in ((velocity, 'velocity'), (acceleration, 'acceleration'),
                      (deceleration, 'deceleration'), (tolerance, 'tolerance'),
                      (timeout_ms, 'timeout_ms'), (kp, 'kp')):
@@ -369,8 +383,12 @@ class DeltaBots:
         try:
             self._stop_drive()
             while True:
-                self._deadline(timer, timeout_ms, 'Gyro_Turn')
                 now = timer.time()
+                # A requested time limit is normal completion, not a failure.
+                # Check it first so time_ms == timeout_ms finishes normally.
+                if time_ms is not None and now >= time_ms:
+                    break
+                self._deadline(timer, timeout_ms, 'Gyro_Turn')
                 dt = max(1, now - previous_time) / 1000
                 previous_time = now
                 heading = self.Get_YAW_Angle(False)
@@ -411,10 +429,15 @@ class DeltaBots:
                   acceleration=200, deceleration=400, stop=Stop.BRAKE,
                   timeout_ms=DEFAULT_TIMEOUT_MS, tolerance=2, heading_kp=5.0,
                   max_turn_rate=60, distance_kp=4, wait=True,
-                  heading_kd=0.5, turn_acceleration=120):
-        """Drive signed mm along heading; wait=False starts concurrent control.
+                  heading_kd=0.5, turn_acceleration=120, time_ms=None):
+        """Drive by distance or time; wait=False starts concurrent control.
 
         direction=None holds starting heading. Driving units mm/s, mm/s^2.
+        Velocity stays positive; signed distance selects forward/reverse.
+        time_ms=None preserves distance-only completion. Otherwise stop normally
+        when the distance settles OR time_ms expires, whichever happens first.
+        time_ms must be finite, nonnegative, and <= timeout_ms. Zero stops
+        immediately. Time expiry applies stop without extra ramp-down time.
         Returns travel if blocking, otherwise a MotionTask handle.
         Steering uses heading_kp * heading_error - heading_kd * yaw_rate.
         The yaw rate is estimated from heading and filtered over 50 ms.
@@ -424,18 +447,28 @@ class DeltaBots:
         """
         return self._start('drive', self._gyro_move(direction, distance, velocity,
             acceleration, deceleration, stop, timeout_ms, tolerance, heading_kp,
-            max_turn_rate, distance_kp, heading_kd, turn_acceleration), wait)
+            max_turn_rate, distance_kp, heading_kd, turn_acceleration, time_ms), wait)
 
     def _gyro_move(self, direction, distance, velocity, acceleration,
                    deceleration, stop, timeout_ms, tolerance, heading_kp,
-                   max_turn_rate, distance_kp, heading_kd, turn_acceleration):
+                   max_turn_rate, distance_kp, heading_kd, turn_acceleration,
+                   time_ms=None):
         """Drive signed mm while maintaining direction (None=current yaw).
 
         Velocity is a positive magnitude in mm/s. Distance controls reverse.
+        An optional time_ms adds an earlier normal stopping condition.
         Returns actual signed encoder travel. Heading gains are turn-rate
         per degree; acceleration/deceleration shape commanded linear speed.
         """
         _mode(stop)
+        timed = time_ms is not None
+        if timed:
+            if not 0 <= time_ms < float('inf'):
+                raise ValueError('time_ms must be finite and nonnegative')
+            if not 0 < timeout_ms < float('inf'):
+                raise ValueError('timeout_ms must be finite and positive')
+            if time_ms > timeout_ms:
+                raise ValueError('time_ms must not exceed timeout_ms')
         for v, n in ((velocity, 'velocity'), (acceleration, 'acceleration'),
                      (deceleration, 'deceleration'), (timeout_ms, 'timeout_ms'),
                      (tolerance, 'tolerance'), (heading_kp, 'heading_kp'),
@@ -459,8 +492,11 @@ class DeltaBots:
         try:
             self._stop_drive()
             while True:
-                self._deadline(timer, timeout_ms, 'Gyro_Move')
                 now = timer.time()
+                # Completion wins when duration equals timeout, as in Drive_Time.
+                if timed and now >= time_ms:
+                    break
+                self._deadline(timer, timeout_ms, 'Gyro_Move')
                 dt = max(1, now - last_time) / 1000
                 last_time = now
                 heading = self.Get_YAW_Angle(False)
