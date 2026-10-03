@@ -457,14 +457,13 @@ def Program_2(bot):
 
 def Program_3(bot):
     """ID 3 - Member 3. Add mission commands here."""
-    from mission_1 import Mission1
-    Mission1(bot)
+    pass  # Add route commands or import and call your member function.
 
 
 def Program_4(bot):
-    """ID 4 - Member 4. Add mission commands here."""
-    pass  # Add route commands or import and call your member function.
-
+    """ID 4 - Alyssa: Mission 1 and Mission 15."""
+    from Program4_Alyssa import Run
+    Run(bot)
 
 def Program_5(bot):
     """ID 5 - Member 5. Add mission commands here."""
@@ -503,14 +502,14 @@ def Program_9(bot):
 # Do not call functions here. ID 0 stays reserved for quitting.
 PROGRAMS = (
     (Program_0, 'Quit', False),
-    (Program_1, 'Delina 1', False),
-    (Program_2, 'Richard 2', False),
-    (Program_3, 'Alyssa 3', True),
-    (Program_4, 'Justin 4', False),
-    (Program_5, 'Michael 5', False),
-    (Program_6, 'Unassigned', False),
-    (Program_7, 'Unassigned', False),
-    (Program_8, 'Peng_Test', False),
+    (Program_1, 'Delina', False),
+    (Program_2, 'Delina', False),
+    (Program_3, 'Richard', False),
+    (Program_4, 'Alyssa', True),
+    (Program_5, 'Alyssa', False),
+    (Program_6, 'Justin', False),
+    (Program_7, 'Justin', False),
+    (Program_8, 'Michael', False),
     (Program_9, 'Robot_self_inspection', True),
 )
 
