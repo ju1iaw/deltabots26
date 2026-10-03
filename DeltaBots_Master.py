@@ -466,8 +466,9 @@ def Program_4(bot):
     Run(bot)
 
 def Program_5(bot):
-    """ID 5 - Member 5. Add mission commands here."""
-    pass  # Add route commands or import and call your member function.
+    """ID 5 - Alyssa: Mission 2."""
+    from Program5_Alyssa import Run
+    Run(bot)
 
 
 def Program_6(bot):
@@ -482,14 +483,12 @@ def Program_7(bot):
 
 def Program_8(bot):
     """ID 8 - Spare. Set M >= 9 to enable."""
-    from Peng_Test import Peng_Test
-    Peng_Test(bot)
-
+    pass  # Add route commands or import and call your member function.
 
 def Program_9(bot):
-    """ID 9 - Robot self-inspection. Set M = 10 to enable."""
-    from Robot_Self_Inspection import Robot_Self_Instpection
-    Robot_Self_Instpection(bot)
+    """ID 9 - Spare. Set M = 10 to enable."""
+    pass  # Add route commands or import and call your member function.
+
 
 
 # ----- PROGRAM LOOKUP TABLE: TEAM MEMBERS EDIT OWNERS HERE -----
@@ -505,7 +504,7 @@ PROGRAMS = (
     (Program_1, 'Delina', False),
     (Program_2, 'Delina', False),
     (Program_3, 'Richard', False),
-    (Program_4, 'Alyssa', True),
+    (Program_4, 'Alyssa', False),
     (Program_5, 'Alyssa', False),
     (Program_6, 'Justin', False),
     (Program_7, 'Justin', False),
