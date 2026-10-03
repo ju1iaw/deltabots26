@@ -1,101 +1,108 @@
-from base_robot import *
+from DeltaBots_Base import *
 
 
-def Run(br: BaseRobot):
-    br.driveForDistance(330, 200)
-    br.turnForAngle(90, 200)
-    br.driveForDistance(430, 200)
-    br.turnForAngle(-75, 200)
-    br.driveForDistance(40, 200)
-    br.moveRightAttachmentMotorForMillis(300, -200)
-    br.turnForAngle(20, 200)
-    br.driveForDistance(-300, 200)
-    br.turnForAngle(-130, 200)
-    br.driveForDistance(400, 200)
-
-
-def align(br: BaseRobot):
-    br.driveForDistance(650, 200)
-    br.stop_line(200, 20, tolerance=5)
-    br.align_line(
-        100, 25, tolerance=5, forward_speed=30, max_turn_rate=40, kp=0.9
+def mission3(bot: DeltaBots):
+    bot.Reset_Gyro(0)
+    bot.Move_Straight(
+        distance=300,
+        velocity=1000,
+        acceleration=200,
+        deceleration=400,
+        stop=Stop.BRAKE,
+        wait=True,
+    )
+    bot.Move_Straight(
+        distance=-240,
+        velocity=300,
+        acceleration=200,
+        deceleration=400,
+        stop=Stop.BRAKE,
+        wait=True,
     )
 
-
-def Run2(br: BaseRobot):
-    br.driveForDistance(650, 200)
-    br.turnForAngle(-100, 200)
-    br.driveForDistance(100, 200)
-    br.turnForAngle(-40, 200)
-    br.moveRightAttachmentMotorForMillis(1000, 200)
-    br.driveForDistance(-200, 200)
-    br.turnForAngle(100, 200)
-    br.driveForDistance(600, -200)
+    bot.Wait(1000)
 
 
-def test(br: BaseRobot):
-    for i in range(100):
-        print(br.colorSensorLeft.reflection())
-
-
-def rock(br: BaseRobot):
-    if br.colorSensorLeft.reflection() < 25:
-        br.moveRightAttachmentMotorForMillis(1000, 200)
-        br.driveForDistance(-200, 200)
-        br.moveRightAttachmentMotorForMillis(1000, -200)
-        br.turnForAngle(90, 200)
-        br.driveForDistance(75, 200)
-        br.turnForAngle(-90, 200)
-        br.driveForDistance(200, 200)
-    else:
-        br.driveForDistance(-200, 200)
-        br.turnForAngle(90, 200)
-        br.driveForDistance(75, 200)
-        br.turnForAngle(-90, 200)
-        br.driveForDistance(200, 200)
-
-
-def therock(br: BaseRobot):
-    br.driveForDistance(390, 200)
-    for i in range(3):
-        rock(br)
-
-
-def mission3(br: BaseRobot):
-    br.driveForDistance(431.8, 200)
-    br.driveForDistance(-431.8, 200)
+def mission4_5(bot: DeltaBots):
     """
-    while Button.LEFT not in pressed:
-        pressed = br.hub.buttons.pressed()
-    br.turnForAngle(50, 200)
-    br.driveForDistance(300, 200)
-    br.turnForAngle(-50, 200)
-    br.driveForDistance(200, 200)
+    bot.moveLeftAttachmentMotorForMillis(3000, -200)
+    bot.driveForDistance(698.5, 200)
+    bot.turnForAngle(-38, 200)
+    bot.driveForDistance(110, 200)
+    bot.moveLeftAttachmentMotorForMillis(1000, 200)
+    bot.turnForAngle(38, 200)
+    bot.moveRightAttachmentMotorForMillis(1000, 200)
+
+    bot.Reset_Gyro(0)
+    bot.Attachment_Time(side=-1, millis=3000, velocity=-200)
+
+    )
+    """
+    bot.Reset_Gyro(0)
+    bot.Attachment_Time(1, 2000, velocity=200, stop=Stop.HOLD, wait=False)
+    bot.Move_Straight(
+        distance=790,
+        velocity=1000,
+        acceleration=200,
+        deceleration=400,
+        stop=Stop.BRAKE,
+        wait=True,
+    )
+    """
+    bot.Gyro_Turn(
+        angle=-38, velocity=200, acceleration=200, stop=Stop.BRAKE, wait=True
+    )
+    
+    bot.Gyro_Move(
+        distance=110,
+        velocity=200,
+        acceleration=200,
+        stop=Stop.BRAKE,
+        wait=True,
+    )
+    
+    bot.Move_Straight(
+        distance=110,
+        velocity=200,
+        acceleration=200,
+        deceleration=400,
+        stop=Stop.BRAKE,
+        wait=True,
+    )
+    bot.Attachment_Time(side=-1, millis=1000, velocity=200)
     """
 
+    bot.Gyro_Turn(
+        angle=25,
+        pivot=0,
+        velocity=200,
+        acceleration=200,
+        stop=Stop.BRAKE,
+        wait=True,
+    )
 
-def mission4_5(br: BaseRobot):
-    br.moveLeftAttachmentMotorForMillis(3000, -200)
-
-    br.driveForDistance(698.5, 200)
-    br.turnForAngle(-38, 200)
-    br.driveForDistance(110, 200)
-    br.moveLeftAttachmentMotorForMillis(1000, 200)
-    br.turnForAngle(38, 200)
-    br.moveRightAttachmentMotorForMillis(1000, 200)
-
-
-"""   
-    while Button.LEFT not in pressed:
-        pressed = br.hub.buttons.pressed()
-    br.turnForAngle(50, 200)
-    br.driveForDistance(300, 200)
-    br.turnForAngle(-50, 200)
-    br.driveForDistance(200, 200)
-    """
+    bot.Move_Straight(
+        distance=-40,
+        velocity=200,
+        acceleration=200,
+        deceleration=400,
+        stop=Stop.BRAKE,
+        wait=True,
+    )
+    # bot.Attachment_Time(1, 1000, velocity=-1000, stop=Stop.HOLD, wait=True)
+    bot.Attachment_Angle(side=1, angle=-150, velocity=200, stop=Stop.HOLD, wait=True)
+    bot.Move_Straight(
+        distance=200,
+        velocity=200,
+        acceleration=200,
+        deceleration=400,
+        stop=Stop.BRAKE,
+        wait=True,
+    )
+    # bot.Move_Straight(distance=40, velocity=200, acceleration=200, deceleration=400, stop=Stop.BRAKE, wait=True)
+    # bot.Move_Straight(distance=40, velocity=200, acceleration=200, deceleration=400, stop=Stop.BRAKE, wait=True)
 
 
 if __name__ == "__main__":
-    br = BaseRobot()
-    mission4_5(br)
-    br.stop()
+    bot = DeltaBots()
+    mission4_5(bot)

@@ -457,7 +457,8 @@ def Program_2(bot):
 
 def Program_3(bot):
     """ID 3 - Member 3. Add mission commands here."""
-    pass  # Add route commands or import and call your member function.
+    from mission_1 import Mission1
+    Mission1(bot)
 
 
 def Program_4(bot):
@@ -504,7 +505,7 @@ PROGRAMS = (
     (Program_0, 'Quit', False),
     (Program_1, 'Delina 1', False),
     (Program_2, 'Richard 2', False),
-    (Program_3, 'Alyssa 3', False),
+    (Program_3, 'Alyssa 3', True),
     (Program_4, 'Justin 4', False),
     (Program_5, 'Michael 5', False),
     (Program_6, 'Unassigned', False),
