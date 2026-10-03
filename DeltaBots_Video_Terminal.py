@@ -14,7 +14,7 @@ from pathlib import Path
 import sys
 import threading
 
-from PID_Optimization.DeltaBots_Comparison_To_CSV import ReportWriter
+from DeltaBots_Comparison_To_CSV import ReportWriter
 
 
 def read_commands(loop, queue):
