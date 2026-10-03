@@ -55,7 +55,7 @@ HEADING_KD_VALUES = (0, 0.1, 0.3, 0.6, 1.0, 2.0, 5.0)
 # 2 = Gyro_Move gain sweep only
 # 3 = Move_Straight only (one round per trial)
 TEST_MODE = 2
-PRINT_DETAILED_DATA = True  # False: summaries only; True: include all samples.
+PRINT_DETAILED_DATA = False  # False: summaries only; True: include all samples.
 EXPERIMENT_REPEATS = 1  # Summary mode only; detailed mode runs one set.
 
 # One reusable buffer: timestamp uint32 + heading float32 = 8 bytes/sample.
