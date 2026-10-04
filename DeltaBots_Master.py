@@ -52,7 +52,7 @@ from DeltaBots_Base import DeltaBots, Stop, MotionTimeout
 from pybricks.parameters import Button
 from pybricks.tools import StopWatch
 
-import richardfll
+import Program3_Richard
 
 
 # ----- TEAM CONFIGURATION -----
@@ -452,7 +452,7 @@ def Program_1(bot):
 def Program_2(bot):
     """ID 2 - Member 2. Add mission commands here."""
     br = DeltaBots()
-    richardfll.mission8_9(br)
+    Program3_Richard.mission8_9(br)
 
 
 def Program_3(bot):
@@ -461,13 +461,14 @@ def Program_3(bot):
 
 
 def Program_4(bot):
-    """ID 4 - Member 4. Add mission commands here."""
-    pass  # Add route commands or import and call your member function.
-
+    """ID 4 - Alyssa: Mission 1 and Mission 15."""
+    from Program4_Alyssa import Run
+    Run(bot)
 
 def Program_5(bot):
-    """ID 5 - Member 5. Add mission commands here."""
-    pass  # Add route commands or import and call your member function.
+    """ID 5 - Alyssa: Mission 2."""
+    from Program5_Alyssa import Run
+    Run(bot)
 
 
 def Program_6(bot):
@@ -481,15 +482,13 @@ def Program_7(bot):
 
 
 def Program_8(bot):
-    """ID 8 - Spare. Set M >= 9 to enable."""
-    from Peng_Test import Peng_Test
-    Peng_Test(bot)
-
+    from Program8_Michael import Run
+    Run(bot)
 
 def Program_9(bot):
-    """ID 9 - Robot self-inspection. Set M = 10 to enable."""
-    from Robot_Self_Inspection import Robot_Self_Instpection
-    Robot_Self_Instpection(bot)
+    """ID 9 - Spare. Set M = 10 to enable."""
+    pass  # Add route commands or import and call your member function.
+
 
 
 # ----- PROGRAM LOOKUP TABLE: TEAM MEMBERS EDIT OWNERS HERE -----
@@ -502,14 +501,14 @@ def Program_9(bot):
 # Do not call functions here. ID 0 stays reserved for quitting.
 PROGRAMS = (
     (Program_0, 'Quit', False),
-    (Program_1, 'Delina 1', False),
-    (Program_2, 'Richard 2', False),
-    (Program_3, 'Alyssa 3', False),
-    (Program_4, 'Justin 4', False),
-    (Program_5, 'Michael 5', False),
-    (Program_6, 'Unassigned', False),
-    (Program_7, 'Unassigned', False),
-    (Program_8, 'Peng_Test', False),
+    (Program_1, 'Delina', False),
+    (Program_2, 'Delina', False),
+    (Program_3, 'Richard', False),
+    (Program_4, 'Alyssa', False),
+    (Program_5, 'Alyssa', False),
+    (Program_6, 'Justin', False),
+    (Program_7, 'Justin', False),
+    (Program_8, 'Michael', False),
     (Program_9, 'Robot_self_inspection', True),
 )
 
