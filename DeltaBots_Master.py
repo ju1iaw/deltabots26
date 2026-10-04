@@ -55,32 +55,32 @@ from pybricks.tools import StopWatch
 from justin_capy_13 import Run
 
 # ----- TEAM CONFIGURATION -----
-M = 10                      # Number of selectable programs: integer 1..10 (IDs 0..9).
-DEFAULT_PROGRAM_ID = 1      # Initial selection; M=1 automatically uses ID 0.
-SWING_DEGREES = 90          # Default stroke for entries with swing=True.
+M = 10  # Number of selectable programs: integer 1..10 (IDs 0..9).
+DEFAULT_PROGRAM_ID = 1  # Initial selection; M=1 automatically uses ID 0.
+SWING_DEGREES = 90  # Default stroke for entries with swing=True.
 SWING_ACCELERATION_FACTOR = 1.5  # 50% above pre-swing acceleration/deceleration.
 POLL_MS = 10
 DEBOUNCE_MS = 30
-FINISH_TIMEOUT_MS = 20000    # Wait for remaining wait=False jobs after return.
-PROGRAM_BEEP_ENABLED = False # False disables automatic start/exit tones.
+FINISH_TIMEOUT_MS = 20000  # Wait for remaining wait=False jobs after return.
+PROGRAM_BEEP_ENABLED = False  # False disables automatic start/exit tones.
 PROGRAM_BEEP_DURATION_MS = 0
-TONE_VOLUME = 30            # Speaker volume in percent, 0..100.
+TONE_VOLUME = 30  # Speaker volume in percent, 0..100.
 PROGRAM_TONES = (494, 262, 294, 330, 349, 392, 440, 494, 523, 587)
 # B4 (quit), C4, D4, E4, F4, G4, A4, B4, C5, D5; rounded Hz, A4 = 440 Hz.
 
 
 # Each string is a row of five LEDs, from left to right; 1=on, 0=off.
 BIG_DIGITS = (
-    ('01110', '10001', '10001', '10001', '01110'),  # 0
-    ('00100', '01100', '00100', '00100', '11111'),  # 1
-    ('11110', '00001', '01110', '10000', '11111'),  # 2
-    ('11110', '00001', '01110', '00001', '11110'),  # 3
-    ('10010', '10010', '11111', '00010', '00010'),  # 4
-    ('11111', '10000', '11110', '00001', '11110'),  # 5
-    ('01111', '10000', '11110', '10001', '01110'),  # 6
-    ('11111', '00001', '00010', '00100', '01000'),  # 7
-    ('01110', '10001', '01110', '10001', '01110'),  # 8
-    ('01110', '10001', '01111', '00001', '11110'),  # 9
+    ("01110", "10001", "10001", "10001", "01110"),  # 0
+    ("00100", "01100", "00100", "00100", "11111"),  # 1
+    ("11110", "00001", "01110", "10000", "11111"),  # 2
+    ("11110", "00001", "01110", "00001", "11110"),  # 3
+    ("10010", "10010", "11111", "00010", "00010"),  # 4
+    ("11111", "10000", "11110", "00001", "11110"),  # 5
+    ("01111", "10000", "11110", "10001", "01110"),  # 6
+    ("11111", "00001", "00010", "00100", "01000"),  # 7
+    ("01110", "10001", "01110", "10001", "01110"),  # 8
+    ("01110", "10001", "01111", "00001", "11110"),  # 9
 )
 
 
@@ -124,10 +124,10 @@ class MasterRobot(DeltaBots):
         A detected stall or stroke timeout stops both attachments normally;
         the master stays running. Encoder angles are preserved.
         """
-        if not isinstance(x, (int, float)) or not 0 < abs(x) < float('inf'):
-            raise ValueError('x must be a finite, nonzero angle in degrees')
-        if not 0 < SWING_ACCELERATION_FACTOR < float('inf'):
-            raise ValueError('SWING_ACCELERATION_FACTOR must be finite and positive')
+        if not isinstance(x, (int, float)) or not 0 < abs(x) < float("inf"):
+            raise ValueError("x must be a finite, nonzero angle in degrees")
+        if not 0 < SWING_ACCELERATION_FACTOR < float("inf"):
+            raise ValueError("SWING_ACCELERATION_FACTOR must be finite and positive")
         if self._in_mission:
             self._pending_swing = x
             return
@@ -143,8 +143,7 @@ class MasterRobot(DeltaBots):
             for motor, limits in zip(motors, self._swing_limits):
                 acceleration = limits[1]
                 if isinstance(acceleration, (tuple, list)):
-                    acceleration = tuple(value * SWING_ACCELERATION_FACTOR
-                                         for value in acceleration)
+                    acceleration = tuple(value * SWING_ACCELERATION_FACTOR for value in acceleration)
                 else:
                     acceleration *= SWING_ACCELERATION_FACTOR
                 motor.control.limits(acceleration=acceleration)
@@ -156,8 +155,7 @@ class MasterRobot(DeltaBots):
     def _swing_leg(self):
         motors, origins, tolerances, x, outward, timer = self._swing
         for motor, origin, limits in zip(motors, origins, self._swing_limits):
-            motor.run_target(limits[0], origin + (x if outward else 0),
-                             then=Stop.HOLD, wait=False)
+            motor.run_target(limits[0], origin + (x if outward else 0), then=Stop.HOLD, wait=False)
         timer.reset()
 
     def Stop_Swing(self):
@@ -197,9 +195,9 @@ class MasterRobot(DeltaBots):
         A new call replaces the old tone. Duration is in ms; frequency in Hz.
         """
         if not 64 <= frequency <= 24000 or duration < 0:
-            raise ValueError('frequency must be 64..24000 Hz; duration >= 0')
+            raise ValueError("frequency must be 64..24000 Hz; duration >= 0")
         if not isinstance(wait, bool):
-            raise ValueError('wait must be True or False')
+            raise ValueError("wait must be True or False")
         self.Stop_Sound()
         if duration == 0:
             return
@@ -219,30 +217,28 @@ class MasterRobot(DeltaBots):
     def Update(self):
         try:
             if self._in_mission and self._cancel_buttons is not None:
-                event = self._cancel_buttons.update(
-                    self.hub.buttons.pressed(), self._button_clock.time())
+                event = self._cancel_buttons.update(self.hub.buttons.pressed(), self._button_clock.time())
                 if event == Button.CENTER:
                     raise ProgramCancelled()
-            if (self._tone_timer is not None
-                    and self._tone_timer.time() >= self._tone_duration):
+            if self._tone_timer is not None and self._tone_timer.time() >= self._tone_duration:
                 self.Stop_Sound()
             active = DeltaBots.Update(self)
             if self._swing is not None:
                 motors, origins, tolerances, x, outward, timer = self._swing
                 if any(motor.stalled() for motor in motors):
                     self.Stop_Swing()
-                    print('Attachment swing stopped: hard stop/stall detected. Ready for next command.')
+                    print("Attachment swing stopped: hard stop/stall detected. Ready for next command.")
                     return active
                 # Check measured position/speed before reversing either motor.
-                if all(abs(motor.angle() - origin - (x if outward else 0))
-                       <= min(tolerance[1], abs(x) / 4)
-                       and abs(motor.speed()) <= tolerance[0]
-                       for motor, origin, tolerance in zip(motors, origins, tolerances)):
+                if all(
+                    abs(motor.angle() - origin - (x if outward else 0)) <= min(tolerance[1], abs(x) / 4) and abs(motor.speed()) <= tolerance[0]
+                    for motor, origin, tolerance in zip(motors, origins, tolerances)
+                ):
                     self._swing = (motors, origins, tolerances, x, not outward, timer)
                     self._swing_leg()
                 elif timer.time() >= FINISH_TIMEOUT_MS:
                     self.Stop_Swing()
-                    print('Attachment swing stopped: stroke timed out. Ready for next command.')
+                    print("Attachment swing stopped: stroke timed out. Ready for next command.")
             return active
         except BaseException:
             self.Stop_All()
@@ -253,10 +249,10 @@ class MasterRobot(DeltaBots):
 def Show_Program_ID(bot, program_id):
     """Draw a full-size digit rotated 90 degrees clockwise; overwrite LEDs."""
     if type(program_id) is not int or not 0 <= program_id < len(BIG_DIGITS):
-        raise ValueError('program_id must be an integer from 0 to 9')
+        raise ValueError("program_id must be an integer from 0 to 9")
     for row in range(5):
         for column in range(5):
-            brightness = 100 if BIG_DIGITS[program_id][4 - column][row] == '1' else 0
+            brightness = 100 if BIG_DIGITS[program_id][4 - column][row] == "1" else 0
             bot.hub.display.pixel(row, column, brightness)
 
 
@@ -264,8 +260,7 @@ def Default_Program(bot, program_id, wait=False):
     """Show ID and optionally play its configured automatic program tone."""
     Show_Program_ID(bot, program_id)
     if PROGRAM_BEEP_ENABLED:
-        bot.Beep(frequency=PROGRAM_TONES[program_id],
-                 duration=PROGRAM_BEEP_DURATION_MS, wait=wait)
+        bot.Beep(frequency=PROGRAM_TONES[program_id], duration=PROGRAM_BEEP_DURATION_MS, wait=wait)
 
 
 # ----- MENU ENGINE: TEAM MEMBERS NORMALLY LEAVE THIS SECTION UNCHANGED -----
@@ -316,25 +311,25 @@ class _ReleaseButtons:
 def _program_entry(selected):
     entry = PROGRAMS[selected]
     if len(entry) not in (2, 3):
-        raise ValueError('PROGRAMS entries need function, owner, optional swing')
+        raise ValueError("PROGRAMS entries need function, owner, optional swing")
     function, owner = entry[0], entry[1]
     swing = entry[2] if len(entry) == 3 else False
     if not callable(function) or type(swing) is not bool:
-        raise ValueError('Program function must be callable; swing must be True/False')
+        raise ValueError("Program function must be callable; swing must be True/False")
     return function, owner, swing
 
 
 def _validate_count(m):
     if type(m) is not int or not 1 <= m <= 10:
-        raise ValueError('M must be an integer from 1 to 10')
+        raise ValueError("M must be an integer from 1 to 10")
     if len(PROGRAMS) < m:
-        raise ValueError('PROGRAMS does not contain enough program slots')
+        raise ValueError("PROGRAMS does not contain enough program slots")
     for selected in range(m):
         _program_entry(selected)
     if type(PROGRAM_BEEP_ENABLED) is not bool:
-        raise ValueError('PROGRAM_BEEP_ENABLED must be True/False')
-    if not 0 <= PROGRAM_BEEP_DURATION_MS < float('inf'):
-        raise ValueError('PROGRAM_BEEP_DURATION_MS must be finite and nonnegative')
+        raise ValueError("PROGRAM_BEEP_ENABLED must be True/False")
+    if not 0 <= PROGRAM_BEEP_DURATION_MS < float("inf"):
+        raise ValueError("PROGRAM_BEEP_DURATION_MS must be finite and nonnegative")
 
 
 def _apply_selection(bot, selected, stroke=None):
@@ -351,7 +346,7 @@ def _run_selected(bot, selected):
         Program_0(bot)
         return False
     function, owner, swing = _program_entry(selected)
-    print('Starting program', selected, '-', owner)
+    print("Starting program", selected, "-", owner)
     pending_swing = None
     succeeded = False
     bot._cancel_buttons = _ReleaseButtons()
@@ -368,13 +363,13 @@ def _run_selected(bot, selected):
         bot.Wait_All(timeout_ms=FINISH_TIMEOUT_MS)
         pending_swing = bot._pending_swing
         succeeded = True
-        print('Program', selected, 'finished')
+        print("Program", selected, "finished")
     except ProgramCancelled:
         bot.Stop_Sound()
-        print('Program', selected, 'cancelled; ready for selection')
+        print("Program", selected, "cancelled; ready for selection")
     except Exception as error:
         bot.Stop_Sound()
-        print('Program', selected, 'failed:', type(error).__name__, str(error))
+        print("Program", selected, "failed:", type(error).__name__, str(error))
     finally:
         bot._in_mission = False
         bot._cancel_buttons = None
@@ -390,7 +385,7 @@ def main(m=M, default_program_id=None):
     if default_program_id is None:
         default_program_id = 0 if m == 1 else DEFAULT_PROGRAM_ID
     if type(default_program_id) is not int or not 0 <= default_program_id < m:
-        raise ValueError('Default program ID must be an integer from 0 to M-1')
+        raise ValueError("Default program ID must be an integer from 0 to M-1")
     bot = MasterRobot()
     selected = default_program_id
     timer = StopWatch()
@@ -401,10 +396,10 @@ def main(m=M, default_program_id=None):
         bot.hub.system.set_stop_button((Button.LEFT, Button.RIGHT))
         bot.Stop_All(stop=Stop.BRAKE)
         _apply_selection(bot, selected)
-        print('DeltaBots selector: IDs 0 through', m - 1)
-        print('Release RIGHT/LEFT to select; release CENTER to run/cancel.')
-        print('Select ID 0 and release CENTER to quit.')
-        print('Press LEFT+RIGHT together to stop the entire master.')
+        print("DeltaBots selector: IDs 0 through", m - 1)
+        print("Release RIGHT/LEFT to select; release CENTER to run/cancel.")
+        print("Select ID 0 and release CENTER to quit.")
+        print("Press LEFT+RIGHT together to stop the entire master.")
         while True:
             event = buttons.update(bot.hub.buttons.pressed(), timer.time())
             if event == Button.RIGHT:
@@ -431,7 +426,7 @@ def Program_0(bot):
     """ID 0 - Reserved: quit the master program."""
     # Finish the exit tone before program shutdown stops the speaker.
     Default_Program(bot, 0, wait=True)
-    print('Exiting DeltaBots master.')
+    print("Exiting DeltaBots master.")
 
 
 def Program_1(bot):
@@ -450,23 +445,26 @@ def Program_1(bot):
 
 def Program_2(bot):
     """ID 2 - Member 2. Add mission commands here."""
-  
 
 
 def Program_3(bot):
     """ID 3 - Richard: Mission 8 and Mission 9."""
     from Program3_Richard import Run
+
     Run(bot)
 
 
 def Program_4(bot):
     """ID 4 - Alyssa: Mission 1 and Mission 15."""
     from Program4_Alyssa import Run
+
     Run(bot)
+
 
 def Program_5(bot):
     """ID 5 - Alyssa: Mission 2."""
     from Program5_Alyssa import Run
+
     Run(bot)
 
 
@@ -484,12 +482,13 @@ def Program_7(bot):
 def Program_8(bot):
     """ID 8 - Michael: Mission 6, 7, 11 and 12."""
     from Program8_Michael import Run
+
     Run(bot)
+
 
 def Program_9(bot):
     """ID 9 - Spare. Set M = 10 to enable."""
     pass  # Add route commands or import and call your member function.
-
 
 
 # ----- PROGRAM LOOKUP TABLE: TEAM MEMBERS EDIT OWNERS HERE -----
@@ -501,19 +500,19 @@ def Program_9(bot):
 # List FLL mission IDs/order in the corresponding program's comments/docstring.
 # Do not call functions here. ID 0 stays reserved for quitting.
 PROGRAMS = (
-    (Program_0, 'Quit', False),
-    (Program_1, 'Delina', False),
-    (Program_2, 'Delina', False),
-    (Program_3, 'Richard', False),
-    (Program_4, 'Alyssa', False),
-    (Program_5, 'Alyssa', False),
-    (Program_6, 'Justin', False),
-    (Program_7, 'Justin', False),
-    (Program_8, 'Michael', False),
-    (Program_9, 'Robot_self_inspection', True),
+    (Program_0, "Quit", False),
+    (Program_1, "Delina", False),
+    (Program_2, "Delina", False),
+    (Program_3, "Richard", False),
+    (Program_4, "Alyssa", False),
+    (Program_5, "Alyssa", False),
+    (Program_6, "Justin", False),
+    (Program_7, "Justin", False),
+    (Program_8, "Michael", False),
+    (Program_9, "Robot_self_inspection", True),
 )
 
 
 # Keep startup last: all program functions and the LUT must exist first.
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
