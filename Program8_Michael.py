@@ -43,9 +43,7 @@ def Run(bot=None):
     bot.Gyro_Turn(-90, pivot=0, velocity=90,acceleration=200, stop=Stop.BRAKE, wait=True)
     bot.Move_Straight(distance=370, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)
     bot.Gyro_Turn(133, pivot=0, velocity=90,acceleration=200, stop=Stop.BRAKE, wait=True)
-
     bot.Move_Straight(distance=600, velocity=100,acceleration=200, stop=Stop.BRAKE, wait=True) 
-
     bot.Stop_Line(sensor=-1, velocity=-60, reflectance=40,stop=Stop.BRAKE, wait=True)
     bot.Gyro_Turn(-35, absolute=True, pivot=0, velocity=90,acceleration=200, stop=Stop.BRAKE, wait=True)
     bot.Move_Straight(distance=-1000, velocity=600,acceleration=200, deceleration=400,stop=Stop.BRAKE, wait=True)  
