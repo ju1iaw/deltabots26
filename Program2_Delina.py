@@ -1,30 +1,8 @@
-# Program 1 and 2
+# Program 2
 # Owner: Delina
-# Missions, in execution order: Mission 3, Mission 4 and 5
+# Missions, in execution order: Mission 4 and 5
 
 from DeltaBots_Base import *
-
-
-def mission3(bot: DeltaBots):
-    bot.Reset_Gyro(0)
-    bot.Move_Straight(
-        distance=300,
-        velocity=1000,
-        acceleration=200,
-        deceleration=400,
-        stop=Stop.BRAKE,
-        wait=True,
-    )
-    bot.Move_Straight(
-        distance=-240,
-        velocity=1000,
-        acceleration=200,
-        deceleration=400,
-        stop=Stop.BRAKE,
-        wait=True,
-    )
-
-    bot.Wait(1000)
 
 
 def mission4_5(bot: DeltaBots):
