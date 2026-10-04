@@ -52,8 +52,6 @@ from DeltaBots_Base import DeltaBots, Stop, MotionTimeout
 from pybricks.parameters import Button
 from pybricks.tools import StopWatch
 
-from justin_capy_13 import Run
-
 # ----- TEAM CONFIGURATION -----
 M = 10  # Number of selectable programs: integer 1..10 (IDs 0..9).
 DEFAULT_PROGRAM_ID = 1  # Initial selection; M=1 automatically uses ID 0.
@@ -430,27 +428,19 @@ def Program_0(bot):
 
 
 def Program_1(bot):
-    """ID 1 - Member 1. Add mission commands here.
-
-    FLL missions / execution order: fill in your plan here.
-    Example only: this program could perform FLL mission 8, then 3, then 12.
-    Call those mission helpers in that order, always passing this same bot.
-    The program ID does not determine which game missions it performs.
-
-    Optional last line: bot.Swing_Attachments(x=90)
-    This custom stroke is used after success only if this LUT entry enables swing.
-    """
-    pass  # Add route commands or import and call your member function.
+    """ID 1 - Delina. mission: 3"""
+    from Program1_Delina import Run
+    Run(bot) 
 
 
 def Program_2(bot):
-    """ID 2 - Member 2. Add mission commands here."""
-
+    """ID 2 - Delina mission: 4 and 5"""
+    from Program2_Delina import Run
+    Run(bot)  
 
 def Program_3(bot):
     """ID 3 - Richard: Mission 8 and Mission 9."""
     from Program3_Richard import Run
-
     Run(bot)
 
 
@@ -469,12 +459,12 @@ def Program_5(bot):
 
 
 def Program_6(bot):
-    """ID 6 - Justin: Mission: """
+    """ID 6 - Justin: Mission 15 """
     from Program6_Justin import Run
     Run(bot)
 
 def Program_7(bot):
-    """ID 7 - Justin:Mission"""
+    """ID 7 - Justin:Mission 13"""
     from Program7_Justin import Run
     Run(bot)
     
