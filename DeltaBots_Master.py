@@ -482,8 +482,8 @@ def Program_7(bot):
 
 
 def Program_8(bot):
-    from Program8_Michael import Run
-    Run(bot)
+    """ID 8 - Spare. Set M >= 9 to enable."""
+    pass  # Add route commands or import and call your member function.
 
 def Program_9(bot):
     """ID 9 - Spare. Set M = 10 to enable."""
