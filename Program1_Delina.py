@@ -5,7 +5,7 @@
 from DeltaBots_Base import *
 
 
-def mission3(bot: DeltaBots):
+def Run(bot: DeltaBots):
     bot.Reset_Gyro(0)
     bot.Move_Straight(
         distance=300,
@@ -27,4 +27,4 @@ def mission3(bot: DeltaBots):
 
 if __name__ == "__main__":
     bot = DeltaBots()
-    mission3(bot)
+    Run(bot)

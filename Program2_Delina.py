@@ -5,7 +5,7 @@
 from DeltaBots_Base import *
 
 
-def mission4_5(bot: DeltaBots):
+def Run(bot: DeltaBots):
     bot.Reset_Gyro(0)
     # lower down right attachment
     bot.Attachment_Time(1, 2000, velocity=200, stop=Stop.HOLD, wait=False)
@@ -88,4 +88,4 @@ def mission4_5(bot: DeltaBots):
 
 if __name__ == "__main__":
     bot = DeltaBots()
-    mission4_5(bot)
+    Run(bot)
