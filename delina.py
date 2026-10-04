@@ -1,3 +1,7 @@
+# Program 1 and 2
+# Owner: Delina
+# Missions, in execution order: Mission 3, Mission 4 and 5
+
 from DeltaBots_Base import *
 
 
@@ -24,10 +28,6 @@ def mission3(bot: DeltaBots):
 
 
 def mission4_5(bot: DeltaBots):
-    # reset attachment motor to
-    bot.Attachment_Reset(-1, angle=0)
-    bot.Attachment_Reset(1, angle=0)
-
     bot.Reset_Gyro(0)
     # lower down right attachment
     bot.Attachment_Time(1, 2000, velocity=200, stop=Stop.HOLD, wait=False)
