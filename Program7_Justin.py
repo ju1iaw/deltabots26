@@ -1,7 +1,11 @@
+# Program 7
+# Owner: Justin
+# Mission 13
 from DeltaBots_Base import DeltaBots
 
-def Run():
-	bot = DeltaBots()
+def Run(bot=None):
+	if bot is None:
+		bot = DeltaBots()
 	bot.Reset_Gyro()
 	bot.Gyro_Move(distance=170, velocity=200)
 	bot.Gyro_Turn(angle=30, velocity=100)
