@@ -6,8 +6,8 @@ from DeltaBots_Base import *
 
 def Run(bot=None):
     if bot is None:
-            bot = DeltaBots()   
-#_____________________________________
+        bot = DeltaBots()   
+
     bot.Attachment_Time(1,400,-500, wait=True)
     # Bot.Attachment_Time(-1,2300, -7000)
     # Bot.Attachment_Time(-1,2300, 7000)
@@ -43,6 +43,5 @@ def Run(bot=None):
     bot.Gyro_Move(30,-600,700)
 
 if __name__ == "__main__":
-    bot= DeltaBots() 
     Run()
 
