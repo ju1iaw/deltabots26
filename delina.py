@@ -13,7 +13,7 @@ def mission3(bot: DeltaBots):
     )
     bot.Move_Straight(
         distance=-240,
-        velocity=300,
+        velocity=1000,
         acceleration=200,
         deceleration=400,
         stop=Stop.BRAKE,
@@ -24,6 +24,10 @@ def mission3(bot: DeltaBots):
 
 
 def mission4_5(bot: DeltaBots):
+    # reset attachment motor to
+    bot.Attachment_Reset(-1, angle=0)
+    bot.Attachment_Reset(1, angle=0)
+
     bot.Reset_Gyro(0)
     # lower down right attachment
     bot.Attachment_Time(1, 2000, velocity=200, stop=Stop.HOLD, wait=False)
@@ -72,7 +76,7 @@ def mission4_5(bot: DeltaBots):
     )
 
     # back up robot to point to mission 4
-    bot.Gyro_Move(direction=-45, distance=-200, velocity=150, acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Gyro_Move(direction=-42, distance=-200, velocity=150, acceleration=200, stop=Stop.BRAKE, wait=True)
 
     # lower down left attachment
     bot.Attachment_Time(-1, 1000, velocity=-1000, stop=Stop.HOLD, wait=True)
