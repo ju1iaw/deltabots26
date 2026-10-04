@@ -119,7 +119,7 @@ class DeltaBots:
                   acceleration=200, deceleration=400, stop=Stop.BRAKE,
                   timeout_ms=DEFAULT_TIMEOUT_MS, tolerance=2, heading_kp=5.0,
                   max_turn_rate=60, distance_kp=4, wait=True,
-                  heading_kd=0.5, turn_acceleration=120, time_ms=None):
+                  heading_kd=0.6, turn_acceleration=120, time_ms=None):
         """Drive by distance or time; wait=False starts concurrent control."""
         return self._start('drive', self._gyro_move(direction, distance, velocity,
             acceleration, deceleration, stop, timeout_ms, tolerance, heading_kp,
