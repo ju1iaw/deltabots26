@@ -1,63 +1,58 @@
 #from turtle import speed
 
-from base_robot import *
+from DeltaBots_Base import *
 
 
+def Run(bot):
 
-def OutputReflectivity(br: BaseRobot):
-    """Temporarily output reflectivity values from both sensors"""
-    print("Reading reflectivity values for 10 seconds...")
-    for i in range(100):
-        left_refl = br.colorSensorLeft.reflection()
-        right_refl = br.colorSensorRight.reflection()
-        print(f"Left: {left_refl}, Right: {right_refl}")
-        wait(100)
-    print("Done.")
-
-
-def Run(br: BaseRobot):
     '''
-    br.moveLeftAttachmentMotorForMillis(775, 200)
-    br.moveRightAttachmentMotorForMillis(1200, 200)
-    br.driveForDistance(422,200)
-    #br.moveLeftAttachmentMotorForMillis(2050, -100)
-    br.moveRightAttachmentMotorForMillis(370, -200)
-    br.driveForDistance(-130, 200)
-    #br.moveLeftAttachmentMotorForMillis(2050, 100)
-    br.moveRightAttachmentMotorForMillis(500, 200)    
-    #br.driveForDistance(-455,150)
-    br.moveRightAttachmentMotorForMillis(1300, -200)
-    br.driveForDistance(50, 200)
-    br.turnForAngle(-40, 200)
-    #br.driveForDistance(600, 200)
-    br.moveLeftAttachmentMotorForMillis(775, -200)
-    br.turnForAngle(50, 200)
-    br.driveForDistance(-30, 200)
-    br.moveLeftAttachmentMotorForMillis(1550, 100)
-    '''
-    #br.moveLeftAttachmentMotorForMillis(1550,200)
-    br.driveForDistance(630, 200) 
-    br.moveRightAttachmentMotorForMillis(900, 200)
-    br.turnForAngle(20, 200)
-    br.moveRightAttachmentMotorForMillis(800, -200)    
-    br.moveRightAttachmentMotorForMillis(950, 200)
-    br.driveForDistance(-100, 200)
-    br.driveForDistance(50, 200)
-    br.turnForAngle(-20, 200)
-    br.moveRightAttachmentMotorForMillis(1200, -200)
-    br.moveLeftAttachmentMotorForMillis(1550, -200)
-    br.turnForAngle(-90, 200)
-    br.driveForDistance(450, 200)
-    br.turnForAngle(135, 200)     
-    br.driveForDistance(600, 100)
+    bot.Reset_Gyro(0)
+    bot.Attachment_Angle(-1, 180, velocity=300,stop=Stop.HOLD, wait=False)
+    bot.Move_Straight(distance=630, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Attachment_Angle(1, 180, velocity=300,stop=Stop.HOLD, wait=True)
+    bot.Gyro_Turn(15, pivot=0, velocity=90,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Attachment_Angle(1, -180, velocity=300,stop=Stop.HOLD, wait=True)
+    bot.Attachment_Angle(1, 180, velocity=300,stop=Stop.HOLD, wait=True)
+    bot.Move_Straight(distance=-110, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Attachment_Angle(1, -180, velocity=300,stop=Stop.HOLD, wait=True)
+    bot.Move_Straight(distance=100, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Gyro_Turn(-20, pivot=0, velocity=90,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Attachment_Time(-1, 1000, velocity=-300,stop=Stop.HOLD, wait=True)
+    bot.Gyro_Turn(-90, pivot=0, velocity=90,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Move_Straight(distance=370, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Gyro_Turn(133, pivot=0, velocity=90,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Move_Straight(distance=600, velocity=150,acceleration=200, stop=Stop.BRAKE, wait=True) 
+    bot.Move_Straight(distance=-100, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Gyro_Turn(-82, pivot=0, velocity=90,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Move_Straight(distance=-1000, velocity=600,acceleration=200, deceleration=400,stop=Stop.BRAKE, wait=True)  
+'''
+    bot.Reset_Gyro(0)
+    bot.Attachment_Angle(-1, 180, velocity=300,stop=Stop.HOLD, wait=False)
+    bot.Move_Straight(distance=630, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Attachment_Angle(1, 180, velocity=300,stop=Stop.HOLD, wait=True)
+    bot.Gyro_Turn(15, pivot=0, velocity=90,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Attachment_Angle(1, -180, velocity=300,stop=Stop.HOLD, wait=True)
+    bot.Attachment_Angle(1, 180, velocity=300,stop=Stop.HOLD, wait=True)
+    bot.Move_Straight(distance=-110, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Attachment_Angle(1, -180, velocity=300,stop=Stop.HOLD, wait=True)
+    bot.Move_Straight(distance=100, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Gyro_Turn(-20, pivot=0, velocity=90,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Attachment_Time(-1, 1000, velocity=-300,stop=Stop.HOLD, wait=True)
+    bot.Gyro_Turn(-90, pivot=0, velocity=90,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Move_Straight(distance=370, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Gyro_Turn(133, pivot=0, velocity=90,acceleration=200, stop=Stop.BRAKE, wait=True)
 
+    bot.Move_Straight(distance=600, velocity=100,acceleration=200, stop=Stop.BRAKE, wait=True) 
+
+    bot.Stop_Line(sensor=-1, velocity=-60, reflectance=40,stop=Stop.BRAKE, wait=True)
+    bot.Gyro_Turn(-83, pivot=0, velocity=90,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Move_Straight(distance=-1000, velocity=600,acceleration=200, deceleration=400,stop=Stop.BRAKE, wait=True)  
 hub = PrimeHub()
 
 
 if __name__ == "__main__":
-    br = BaseRobot()
-    #OutputReflectivity(br)
-    Run(br)
-
+    bot = DeltaBots()
+    #OutputReflectivity(bot)
+    Run(bot)
 
 
