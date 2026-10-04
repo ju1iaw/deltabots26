@@ -30,10 +30,10 @@
     },
     "codetogether.virtualCursorJoin": "sharedVirtualCursor",
     "editor.rulers": [
-        80
+        200
     ],
     "black-formatter.args": [
         "--line-length",
-        "79"
+        "200"
     ]
 }
