@@ -16,14 +16,12 @@ def Run(bot=None):
     bot.Attachment_Reset(-1, 0)
     bot.Wait(200)
 
-    bot.Attachment_Time(1, 1000, velocity = 300, stop = stop.COAST, wait = True)
+    bot.Attachment_Time(1, 1000, velocity = 300, stop = Stop.COAST, wait = True)
     bot.Attachment_Angle(1, 40, velocity = 300, stop = Stop.COAST, wait = True)
     bot.leftDriveMotor.reset_angle(0)
     bot.rightDriveMotor.reset_angle(0)
     bot.Wait(100)
     bot.Gyro_Move(direction=Start_angle, distance=-30, velocity=200,time_ms=3000, wait=True)
-    #bot.Wait(100)
-    #bot.Attachment_Angle(1, -40, velocity=300,stop=Stop.HOLD, wait=False)
 
     bot.Attachment_Angle(-1, -40, velocity=300,stop=Stop.HOLD, wait=True)
     bot.leftDriveMotor.reset_angle(0)
