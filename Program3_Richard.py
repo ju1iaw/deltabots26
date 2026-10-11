@@ -7,7 +7,7 @@ from DeltaBots_Base import *
 def Run(bot=None):
     if bot is None:
         bot = DeltaBots()   
-
+    bot.Reset_Gyro(0)
     bot.Attachment_Time(1,400,-500, wait=True)
     # Bot.Attachment_Time(-1,2300, -7000)
     # Bot.Attachment_Time(-1,2300, 7000)
