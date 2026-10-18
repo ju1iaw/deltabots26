@@ -7,7 +7,7 @@ from DeltaBots_Base import *
 def Run(bot=None):
     if bot is None:
         bot = DeltaBots()   
-
+    bot.Reset_Gyro(0)
     bot.Attachment_Time(1,400,-500, wait=True)
     # Bot.Attachment_Time(-1,2300, -7000)
     # Bot.Attachment_Time(-1,2300, 7000)
@@ -30,8 +30,8 @@ def Run(bot=None):
     bot.Attachment_Angle(1,80,300)
     bot.Gyro_Move(20,-130,300)
     bot.Attachment_Angle(1,-325,300)
-    bot.Gyro_Move(0 ,120,200)
-    bot.Attachment_Angle(-1, -1650 ,600)
+    bot.Gyro_Move(0 ,115,200)
+    bot.Attachment_Angle(-1, -1600 ,600)
     print('attachment -1900 done')
     # Bot.Gyro_Turn(20,0,300)
     # Bot.Gyro_Turn(-20,0,300)
