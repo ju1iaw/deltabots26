@@ -31,7 +31,7 @@ def Run(bot=None):
     bot.Gyro_Move(20,-130,300)
     bot.Attachment_Angle(1,-325,300)
     bot.Gyro_Move(0 ,115,200)
-    bot.Attachment_Angle(-1, -1750 ,600)
+    bot.Attachment_Angle(-1, -1600 ,600)
     print('attachment -1900 done')
     # Bot.Gyro_Turn(20,0,300)
     # Bot.Gyro_Turn(-20,0,300)
