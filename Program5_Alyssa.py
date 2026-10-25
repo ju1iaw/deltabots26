@@ -20,7 +20,7 @@ def Run(bot=None):
     bot.rightDriveMotor.reset_angle(0)
     bot.Wait(100)
     
-    bot.Gyro_Move(direction=Start_angle, distance=-40, velocity=200,time_ms=3000, wait=True)
+    bot.Gyro_Move(direction=Start_angle, distance=-30, velocity=200,time_ms=3000, wait=True)
     bot.Attachment_Angle(-1, -40, velocity=300,stop=Stop.HOLD, wait=False)
     bot.Wait(300)
     bot.Gyro_Move(direction=Start_angle, distance=-40, velocity=200,time_ms=3000, wait=True)
