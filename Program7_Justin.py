@@ -1,7 +1,7 @@
 # Program 7
 # Owner: Justin
 # Mission 13
-from DeltaBots_Base import DeltaBots
+from DeltaBots_Base import *
 
 def Run(bot=None):
 	if bot is None:
@@ -9,9 +9,10 @@ def Run(bot=None):
 	bot.Reset_Gyro()
 	bot.Gyro_Move(distance=170, velocity=200)
 	bot.Gyro_Turn(angle=30, velocity=100)
-	bot.Gyro_Move(distance=570, velocity=200)
+	bot.Gyro_Move(distance=570, velocity=400)
 	bot.Attachment_Time(1, 750, -900)
 	bot.Gyro_Move(distance=-700, velocity=600)
+	bot.Stop_All(stop=Stop.COAST)
 
     
 
