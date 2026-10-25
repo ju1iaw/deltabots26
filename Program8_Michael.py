@@ -36,13 +36,14 @@ def Run(bot=None):
     #while True:
         #bot.Print_Reflectance()
     #bot.Attachment_Angle(-1, -100, velocity=250,stop=Stop.BRAKE, wait=False)
+    
     bot.Attachment_Angle(1, -50, velocity=250,stop=Stop.BRAKE, wait=True)
     bot.Attachment_Angle(1, 100, velocity=250,stop=Stop.BRAKE, wait=False)
     bot.Move_Straight(distance=630, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)
     bot.Gyro_Turn(20, pivot=0, velocity=200,acceleration=200, stop=Stop.BRAKE, wait=True)
     bot.Attachment_Angle(-1, -160, velocity=250,stop=Stop.BRAKE, wait=False)
     bot.Move_Straight(distance=120, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)  
-    bot.Gyro_Turn(20, pivot=0, velocity=900,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Gyro_Turn(26, pivot=0, velocity=900,acceleration=200, stop=Stop.BRAKE, wait=True)
     bot.Move_Straight(distance=500, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)
     bot.Attachment_Angle(-1, 160, velocity=1000,stop=Stop.BRAKE, wait=False)
     bot.Attachment_Angle(1, -100, velocity=650,stop=Stop.BRAKE, wait=True)
@@ -58,7 +59,7 @@ def Run(bot=None):
     bot.Move_Straight(distance=-30, velocity=100,acceleration=200, stop=Stop.BRAKE, wait=True)
     bot.Gyro_Turn(-90, pivot=0, velocity=100,acceleration=200, stop=Stop.BRAKE, wait=True)
     bot.Move_Straight(distance=-1000, velocity=250000,acceleration=200, stop=Stop.BRAKE, wait=True)
-
+    
      
 if __name__ == "__main__":
     Run()
