@@ -11,7 +11,7 @@ def Run(bot=None):
 	bot.Attachment_Time(-1, 600, 400, wait=False)
 	bot.Wait_All()
 	bot.Gyro_Move(distance=322, velocity=200)
-	bot.Attachment_Time(-1, 600, -550)
+	bot.Attachment_Time(-1, 600, -553)
 	bot.Gyro_Move(distance=-300, velocity=300)
 	bot.Wait_All()
 	
