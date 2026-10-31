@@ -14,7 +14,7 @@ def Run(bot=None):
     bot.leftDriveMotor.reset_angle(0)
     bot.rightDriveMotor.reset_angle(0)
     bot.Wait(100)
-    bot.Gyro_Move(direction= 0, distance=-15,velocity=20,wait=True)
+    bot.Gyro_Move(direction= 0, distance=-18,velocity=20,wait=True)
     bot.Gyro_Turn(angle=-90, pivot=-1, time_ms=1500, velocity=400)
     bot.Gyro_Turn(angle=-15, pivot=0.3, absolute=True,time_ms=2000, velocity=200)  #2000
     bot.Gyro_Turn(angle = -10, pivot = -5, absolute = True, time_ms=3000, velocity = 200) #3000
