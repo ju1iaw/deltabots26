@@ -7,10 +7,11 @@ def Run(bot=None):
 	if bot is None:
 		bot = DeltaBots()
 	bot.Reset_Gyro()
+	bot.Attachment_Time(-1, 1000, 800)
 	bot.Gyro_Move(distance=170, velocity=200)
-	bot.Gyro_Turn(angle=28, velocity=100)
-	bot.Gyro_Move(distance=586, velocity=400)
-	bot.Attachment_Time(1, 750, -900)
+	bot.Gyro_Turn(angle=29, velocity=100)
+	bot.Gyro_Move(distance=587, velocity=400)
+	bot.Attachment_Time(1, 750, -1000)
 	bot.Gyro_Move(distance=-700, velocity=600)
 	bot.Stop_All(stop=Stop.COAST)
 
