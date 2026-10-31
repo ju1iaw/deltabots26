@@ -43,7 +43,7 @@ def Run(bot=None):
     bot.Gyro_Turn(20, pivot=0, velocity=200,acceleration=200, stop=Stop.BRAKE, wait=True)
     bot.Attachment_Angle(-1, -160, velocity=250,stop=Stop.BRAKE, wait=False)
     bot.Move_Straight(distance=120, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)  
-    bot.Gyro_Turn(26, pivot=0, velocity=900,acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Gyro_Turn(47,absolute=True,pivot=0, velocity=900,acceleration=200, stop=Stop.BRAKE, wait=True)
     bot.Move_Straight(distance=500, velocity=250,acceleration=200, stop=Stop.BRAKE, wait=True)
     bot.Attachment_Angle(-1, 160, velocity=1000,stop=Stop.BRAKE, wait=False)
     bot.Attachment_Angle(1, -100, velocity=650,stop=Stop.BRAKE, wait=True)
