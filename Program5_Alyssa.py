@@ -31,10 +31,10 @@ def Run(bot=None):
     bot.Wait(300)
     bot.Gyro_Move(direction=Start_angle, distance=-220, velocity=200,time_ms=3000, wait=True)
     bot.Attachment_Angle(-1, 100, velocity=300,stop=Stop.HOLD, wait=False)
-    bot.Gyro_Move(direction=-13, distance=850, velocity=900, wait=True)
+    bot.Gyro_Move(direction=-16, distance=810, velocity=900, wait=True)
 #    bot.Attachment_Angle(-1, -150, velocity=300,stop=Stop.HOLD, wait=False)
 #    bot.Wait(500)
-    bot.Gyro_Move(direction=30, distance=700, velocity=900, wait=True)
+    bot.Gyro_Move(direction=33, distance=710, velocity=900, wait=True)
     
     bot.Wait_All()  
 

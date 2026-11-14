@@ -42,7 +42,7 @@ def Robot_Self_Instpection(bot=None):
     try:
         print('Robot self-inspection starting. No line test.')
         step = 'Reset_Gyro'
-        bot.Reset_Gyro(0)
+        bot.Reset_Gyro(0, wait_still=True)  # self-check: keep the 1 s settle
         completed('Reset gyro to 0 deg')
 
         step = 'forward 500 mm at 0 deg'

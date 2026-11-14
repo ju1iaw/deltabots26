@@ -65,9 +65,17 @@ bot.Reset_Gyro(0)
 
 This says: **“The direction the robot faces now is 0°.”** It does not turn the robot.
 
-Place the robot in its intended starting direction and keep it still. This function releases all motors while it waits for the IMU, so support any attachment that depends on the motor holding it up.
+Place the robot in its intended starting direction and take your hand off it before the program starts. This function briefly releases (coasts) all motors, so support any attachment that depends on the motor holding it up.
 
-The default `delay_ms=0` adds no fixed settling delay. The IMU must still be ready and stationary, so the call may wait. To request an extra settling period:
+**The heading resets right away (changed 2026-11).** The call waits only if the IMU is not calibrated yet (`hub.imu.ready()` is False). That happens right after the hub starts, or if the robot has not sat still for a few seconds in the last 10 minutes. Pybricks recalibrates automatically whenever the robot sits still, for example in the menu between runs.
+
+To wait until the hub has been completely still for one full second before resetting (the old behavior, which adds about 1–2 s after pressing CENTER):
+
+```python
+bot.Reset_Gyro(0, wait_still=True)
+```
+
+The default `delay_ms=0` adds no fixed settling delay. To request an extra settling period:
 
 ```python
 bot.Reset_Gyro(angle=0, delay_ms=1000)
@@ -99,9 +107,10 @@ bot.Gyro_Move(direction=0, distance=-500, velocity=150,
 | `distance` | How far to move: positive forward, negative backward. |
 | `velocity` | Positive maximum driving speed; distance sign selects forward/backward. |
 | `time_ms` | Optional time limit in milliseconds; stop at distance or time, whichever comes first. Default `None` adds no time limit. |
-| `acceleration` | How quickly the requested driving speed increases, in mm/s². |
+| `acceleration` | How quickly the requested driving speed increases, in mm/s²; default 400 (was 200 before 2026-11). |
 | `deceleration` | How quickly the requested driving speed decreases, in mm/s²; default 400. |
 | `stop` | How to stop at the end. |
+| `min_speed` | Slowest approach speed before the final stop, in mm/s; default 40. Prevents a slow crawl over the last millimeters. `0` restores the old behavior. |
 | `wait` | Whether to finish this movement before continuing. |
 
 #### Stop at the distance or time limit, whichever comes first
@@ -134,9 +143,9 @@ This replaces the earlier time-only option: distance is no longer ignored, and n
 
 **Turn toward the desired direction first.** This function holds a heading; it is not a command to drive to a location on the mat.
 
-Start with the example speeds. A very large speed number does not guarantee faster travel because the motors have limits.
+Start with the example speeds. A very large speed number does not guarantee faster travel because the motors have limits. With the default 1000 deg/s cap, driving speed is limited to about 489 mm/s.
 
-The current custom controller uses `heading_kp=5.0`, damping `heading_kd=0.5`, filtered yaw-rate estimation, and `turn_acceleration=120` degrees/s². These are steering settings; the `acceleration` parameter controls forward/backward speed.
+The current custom controller uses `heading_kp=5.0`, damping `heading_kd=0.6`, filtered yaw-rate estimation, and `turn_acceleration=120` degrees/s². These are steering settings; the `acceleration` parameter controls forward/backward speed.
 
 `Gyro_Move()` has no `absolute` argument. A specified `direction` is always a target heading relative to the gyro reference, not an amount to turn. For example, from heading 50°, `direction=100` corrects toward 100°, rather than adding 100°. With `direction=None`, it holds the starting heading. It uses the shortest heading correction, so 270° and -90° represent the same direction. This differs from `Gyro_Turn(absolute=True)`, which uses an accumulated target and does not wrap the turn difference. It corrects toward that heading while moving; `Move_Straight()` instead holds the starting heading using native DriveBase control.
 
@@ -186,6 +195,10 @@ bot.Gyro_Turn(90, pivot=-1, velocity=90,
 ```
 
 A wheel-pivot turn also shifts the robot’s center. Account for that when planning a route. Each requested rotation must be between -355° and +355°; for `absolute=True`, this limit applies to target minus current accumulated heading, not to the target number itself. Use two 180° turns for a full circle.
+
+**Ending without creeping:** `min_rate` (default 20 deg/s) is the slowest turning rate before the final stop, so the robot does not crawl over the last degrees. `min_rate=0` restores the old behavior.
+
+**Brake early:** `lead_ms` (default 40; 0 = off) plans the slowdown as if the robot keeps turning for that many milliseconds after each command. This makes up for the small delay of the gyro and motors and reduces overshoot, which allows a higher `kp`. The defaults `kp=16`, `lead_ms=40` were found with `Turn_Tuner.py` on the game mat (no overshoot, about 20–30% faster on turns up to 90° than the old `kp=3`, `lead_ms=0`). Re-run `Turn_Tuner.py` if the robot's weight or wheels change.
 
 **Additional turn options:** fractional pivots and pivots outside -1 to +1 are supported. The pivot point is `pivot * axle_track / 2` mm to the right of axle center.
 
@@ -339,7 +352,7 @@ To drive backward, use `distance=-500` and keep `velocity` positive.
 |---|---|
 | `distance` | Signed travel in mm; default 100. Positive is forward, negative backward. |
 | `velocity` | Positive requested speed in mm/s; default 150, subject to the configured speed cap. |
-| `acceleration` | Speed increase in mm/s²; default 200. |
+| `acceleration` | Speed increase in mm/s²; default 400 (was 200 before 2026-11). |
 | `deceleration` | Speed decrease in mm/s²; default 400. |
 | `stop` | End behavior; default `Stop.BRAKE`. |
 | `timeout_ms` | Maximum movement time; default 20000 ms. |
@@ -539,12 +552,12 @@ Examples were checked for syntax and parameter compatibility against the current
 | `wheel_diameter` | 56 mm | Motor-angle to wheel-travel conversion. |
 | `axle_track` | 113 mm | Wheel spacing used for motor mixing and pivots. |
 | `top_side`, `front_side` | `Axis.Z`, `Axis.X` | Hub mounting orientation. |
-| `max_motor_speed` | 800 deg/s | Software drive-motor speed cap; does not configure attachments. |
+| `max_motor_speed` | 1000 deg/s | Software drive-motor speed cap, never above the drive motors' firmware limit; does not configure attachments. |
 | `loop_ms` | 10 ms | Nominal controller update interval. |
 
 All four motors and both sensors must be present. Configure the hardware once at robot creation. Do not create a separate `DriveBase` to control the same driving motors.
 
-With 56 mm wheels and the default 800 deg/s cap, straight-line speed is limited to approximately 391 mm/s. A higher requested velocity cannot override that cap. Steering correction and physical load may reduce actual speed further.
+With 56 mm wheels and the default 1000 deg/s cap, straight-line speed is limited to approximately 489 mm/s (before 2026-11 the cap was 800 deg/s, about 391 mm/s). A higher requested velocity cannot override that cap. Steering correction and physical load may reduce actual speed further.
 
 ## 9. Parameter defaults and behavior details
 
@@ -552,12 +565,12 @@ The examples deliberately keep the commonly changed parameters visible. Other pa
 
 | Function | Additional defaults and behavior |
 |---|---|
-| `Reset_Gyro` | `angle=0`, `delay_ms=0`, timeout 20000 ms. Coasts all motors, waits for any requested delay, then requires IMU ready and stationary. The timeout includes both waits. Returns accumulated heading. It resets the heading reference, not the physical robot pose. |
-| `Gyro_Move` | `direction=None` holds starting heading; `distance=100`, velocity 150, acceleration 200, deceleration 400. `time_ms=None` adds no time limit; when set, stop at distance or time expiry, whichever is earlier. Velocity stays positive and signed distance selects travel direction. Distance tolerance 2 mm; heading gain 5.0; damping 0.5; yaw-rate filter time constant 50 ms; steering acceleration 120 deg/s²; correction cap 60 deg/s; distance gain 4. Returns signed encoder travel. |
-| `Move_Straight` | Native IMU drive along starting heading. Distance 100 mm, velocity 150 mm/s, acceleration 200 and deceleration 400 mm/s². Native completion criteria; no custom heading gains or tolerance argument. Returns signed encoder travel. |
+| `Reset_Gyro` | `angle=0`, `delay_ms=0`, `wait_still=False`, timeout 20000 ms. Coasts all motors, waits for any requested delay, then requires the IMU to be ready (calibrated); with `wait_still=True` it also requires one second of stillness. The timeout includes all waits. Returns accumulated heading. It resets the heading reference, not the physical robot pose. |
+| `Gyro_Move` | `direction=None` holds starting heading; `distance=100`, velocity 150, acceleration 400, deceleration 400. `time_ms=None` adds no time limit; when set, stop at distance or time expiry, whichever is earlier. Velocity stays positive and signed distance selects travel direction. Distance tolerance 2 mm; heading gain 5.0; damping 0.6; yaw-rate filter time constant 50 ms; steering acceleration 120 deg/s²; correction cap 60 deg/s; distance gain 4; minimum approach speed `min_speed=40` mm/s. Returns signed encoder travel. |
+| `Move_Straight` | Native IMU drive along starting heading. Distance 100 mm, velocity 150 mm/s, acceleration 400 and deceleration 400 mm/s². Native completion criteria; no custom heading gains or tolerance argument. Returns signed encoder travel. |
 | `Wait` | Required `millis` argument; services tasks for that duration. Does not wait for movement completion or stop unfinished tasks. |
 | `Wait_All` | Timeout 20000 ms from this call; services all tracked finite tasks until finished. Does not wait for continuous attachment rotation. |
-| `Gyro_Turn` | `absolute=False` is relative; `absolute=True` targets accumulated heading. Otherwise pivot 0, velocity 90, acceleration 200, deceleration 300, tolerance 1°, gain 3. Optional `time_ms=None`; when set, stop at settled angle or time expiry, whichever is earlier. Returns actual final accumulated heading. |
+| `Gyro_Turn` | `absolute=False` is relative; `absolute=True` targets accumulated heading. Otherwise pivot 0, velocity 90, acceleration 200, deceleration 300, tolerance 1°, gain `kp=16`, minimum approach rate `min_rate=20` deg/s, brake-early `lead_ms=40`. Optional `time_ms=None`; when set, stop at settled angle or time expiry, whichever is earlier. Returns actual final accumulated heading. |
 | `Stop_Line` | Sensor 0, velocity 80, reflectance 50, both mode `'all'`, `stop_below=True`, 3 consecutive samples, maximum travel 1000 mm, reflectance tolerance 2, fine speed 30 mm/s, alignment gain 1.5. Returns both final reflectances. |
 | `Attachment_Angle` / `Attachment_Target` | Velocity 300 deg/s, stop HOLD, timeout 20000 ms, wait True. Return final encoder angle. |
 | `Attachment_Time` | Same defaults; duration must be positive and no greater than timeout. Returns final encoder angle. |
@@ -588,7 +601,7 @@ Tracked-job failures trigger motor cleanup and propagate to the caller when the 
 These signatures are extracted from the current source. Call methods as `bot.Function(...)`; call the constructor as `DeltaBots(...)`. `DEFAULT_TIMEOUT_MS` is 20000.
 
 ```text
-DeltaBots(wheel_diameter=56, axle_track=113, left_drive=Port.A, right_drive=Port.E, left_attachment=Port.B, right_attachment=Port.F, left_sensor=Port.C, right_sensor=Port.D, top_side=Axis.Z, front_side=Axis.X, max_motor_speed=800, loop_ms=10)
+DeltaBots(wheel_diameter=56, axle_track=113, left_drive=Port.A, right_drive=Port.E, left_attachment=Port.B, right_attachment=Port.F, left_sensor=Port.C, right_sensor=Port.D, top_side=Axis.Z, front_side=Axis.X, max_motor_speed=1000, loop_ms=10)
 ```
 
 ```text
@@ -620,7 +633,7 @@ Get_Distance()
 ```
 
 ```text
-Reset_Gyro(angle=0, timeout_ms=DEFAULT_TIMEOUT_MS, delay_ms=0)
+Reset_Gyro(angle=0, timeout_ms=DEFAULT_TIMEOUT_MS, delay_ms=0, wait_still=False)
 ```
 
 ```text
@@ -628,15 +641,15 @@ Get_YAW_Angle(wrapped=True)
 ```
 
 ```text
-Gyro_Turn(angle, pivot=0, velocity=90, acceleration=200, deceleration=300, tolerance=1, stop=Stop.BRAKE, timeout_ms=DEFAULT_TIMEOUT_MS, absolute=False, kp=3, wait=True, time_ms=None)
+Gyro_Turn(angle, pivot=0, velocity=90, acceleration=200, deceleration=300, tolerance=1, stop=Stop.BRAKE, timeout_ms=DEFAULT_TIMEOUT_MS, absolute=False, kp=16, wait=True, time_ms=None, min_rate=20, lead_ms=40)
 ```
 
 ```text
-Gyro_Move(direction=None, distance=100, velocity=150, acceleration=200, deceleration=400, stop=Stop.BRAKE, timeout_ms=DEFAULT_TIMEOUT_MS, tolerance=2, heading_kp=5.0, max_turn_rate=60, distance_kp=4, wait=True, heading_kd=0.5, turn_acceleration=120, time_ms=None)
+Gyro_Move(direction=None, distance=100, velocity=150, acceleration=400, deceleration=400, stop=Stop.BRAKE, timeout_ms=DEFAULT_TIMEOUT_MS, tolerance=2, heading_kp=5.0, max_turn_rate=60, distance_kp=4, wait=True, heading_kd=0.6, turn_acceleration=120, time_ms=None, min_speed=40)
 ```
 
 ```text
-Move_Straight(distance=100, velocity=150, acceleration=200, deceleration=400, stop=Stop.BRAKE, timeout_ms=DEFAULT_TIMEOUT_MS, wait=True)
+Move_Straight(distance=100, velocity=150, acceleration=400, deceleration=400, stop=Stop.BRAKE, timeout_ms=DEFAULT_TIMEOUT_MS, wait=True)
 ```
 
 ```text

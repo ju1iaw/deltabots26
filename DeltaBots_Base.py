@@ -3,7 +3,11 @@
 Based on the user's uploaded DeltaBots_Base(1).py.
 Use: from DeltaBots_Base import *
 Sections: setup; eleven main functions; supporting API; internal helpers.
-Existing signatures/defaults are preserved. Gyro_Move uses PD; KI is test-local.
+Defaults changed in 2026-11 (see CHANGELOG.md): max_motor_speed 1000 deg/s,
+drive acceleration 400 mm/s^2, Reset_Gyro no longer waits for stillness,
+Gyro_Move min_speed=40 mm/s and Gyro_Turn min_rate=20 deg/s (no end creep),
+Gyro_Turn kp=16 with lead_ms=40 (tuned on the game mat with Turn_Tuner.py).
+Gyro_Move uses PD; KI is test-local.
 Units: mm, mm/s, motor/turn deg/s. Positive yaw is clockwise; negative distance reverses.
 wait=False returns a MotionTask; service it with Wait/Wait_All/Update.
 Gyro_Move/Gyro_Turn finish at the target or time_ms, whichever comes first.
@@ -73,7 +77,7 @@ class DeltaBots:
                  left_attachment=Port.B, right_attachment=Port.F,
                  left_sensor=Port.C, right_sensor=Port.D,
                  top_side=Axis.Z, front_side=Axis.X,
-                 max_motor_speed=800, loop_ms=10):
+                 max_motor_speed=1000, loop_ms=10):
         for value, name in ((wheel_diameter, 'wheel_diameter'),
                             (axle_track, 'axle_track'),
                             (max_motor_speed, 'max_motor_speed'),
@@ -89,7 +93,11 @@ class DeltaBots:
         self.wheel_diameter = wheel_diameter
         self.axle_track = axle_track
         self.mm_per_degree = pi * wheel_diameter / 360
-        self.max_motor_speed = max_motor_speed
+        # Drive speed cap in motor deg/s; never above the drive motors' own
+        # firmware speed limit. 1000 deg/s is about 489 mm/s with 56 mm wheels.
+        drive_limit = min(self.leftDriveMotor.control.limits()[0],
+                          self.rightDriveMotor.control.limits()[0])
+        self.max_motor_speed = min(max_motor_speed, drive_limit)
         self.loop_ms = loop_ms
         self._tasks = {}
         self._scheduler_clock = StopWatch()
@@ -97,8 +105,14 @@ class DeltaBots:
         self._native_drive_active = False
 
     # Eleven main functions (application-note order).
-    def Reset_Gyro(self, angle=0, timeout_ms=DEFAULT_TIMEOUT_MS, delay_ms=0):
-        """Coast motors, optionally settle, require ready/stationary IMU."""
+    def Reset_Gyro(self, angle=0, timeout_ms=DEFAULT_TIMEOUT_MS, delay_ms=0,
+                   wait_still=False):
+        """Coast motors, optionally settle, then reset the heading.
+
+        Default: reset right away once the IMU is calibrated (ready), which is
+        normally already true. wait_still=True also waits until the hub has
+        been still for 1 second (Pybricks stationary), as before 2026-11.
+        """
         if not 0 < timeout_ms < float('inf'):
             raise ValueError('timeout_ms must be finite and positive')
         if not 0 <= delay_ms < float('inf'):
@@ -109,30 +123,45 @@ class DeltaBots:
         while True:
             self._deadline(timer, timeout_ms, 'Reset_Gyro')
             if (timer.time() >= delay_ms and self.hub.imu.ready()
-                    and self.hub.imu.stationary()):
+                    and (not wait_still or self.hub.imu.stationary())):
                 break
             self.Wait(min(self.loop_ms, max(1, timeout_ms - timer.time())))
         self.hub.imu.reset_heading(angle)
         return self.Get_YAW_Angle(wrapped=False)
 
     def Gyro_Move(self, direction=None, distance=100, velocity=150,
-                  acceleration=200, deceleration=400, stop=Stop.BRAKE,
+                  acceleration=400, deceleration=400, stop=Stop.BRAKE,
                   timeout_ms=DEFAULT_TIMEOUT_MS, tolerance=2, heading_kp=5.0,
                   max_turn_rate=60, distance_kp=4, wait=True,
-                  heading_kd=0.6, turn_acceleration=120, time_ms=None):
-        """Drive by distance or time; wait=False starts concurrent control."""
+                  heading_kd=0.6, turn_acceleration=120, time_ms=None,
+                  min_speed=40):
+        """Drive by distance or time; wait=False starts concurrent control.
+
+        min_speed (mm/s): slowest approach speed before the final stop, so the
+        robot does not creep over the last millimeters. 0 = old behavior.
+        """
         return self._start('drive', self._gyro_move(direction, distance, velocity,
             acceleration, deceleration, stop, timeout_ms, tolerance, heading_kp,
-            max_turn_rate, distance_kp, heading_kd, turn_acceleration, time_ms), wait)
+            max_turn_rate, distance_kp, heading_kd, turn_acceleration, time_ms,
+            min_speed), wait)
 
     def Gyro_Turn(self, angle, pivot=0, velocity=90, acceleration=200,
                   deceleration=300, tolerance=1, stop=Stop.BRAKE,
-                  timeout_ms=DEFAULT_TIMEOUT_MS, absolute=False, kp=3, wait=True,
-                  time_ms=None):
-        """Relative/absolute gyro turn; wait=False starts concurrent control."""
+                  timeout_ms=DEFAULT_TIMEOUT_MS, absolute=False, kp=16, wait=True,
+                  time_ms=None, min_rate=20, lead_ms=40):
+        """Relative/absolute gyro turn; wait=False starts concurrent control.
+
+        min_rate (deg/s): slowest turning rate before the final stop, so the
+        robot does not creep over the last degrees. 0 = old behavior.
+        lead_ms: brake-early compensation for gyro/motor delay. The slowdown
+        is planned as if the robot will keep turning for lead_ms after each
+        command, which reduces overshoot. 0 = off.
+        Defaults kp=16, lead_ms=40 were tuned on the game mat (2026-11-13);
+        before that they were kp=3, lead_ms=0 (slower, also no overshoot).
+        """
         return self._start('drive', self._gyro_turn(angle, pivot, velocity,
             acceleration, deceleration, tolerance, stop, timeout_ms, absolute, kp,
-            time_ms), wait)
+            time_ms, min_rate, lead_ms), wait)
 
     def Stop_Line(self, sensor=0, velocity=80, reflectance=50,
                   stop=Stop.BRAKE, timeout_ms=DEFAULT_TIMEOUT_MS, both_mode='all',
@@ -182,7 +211,7 @@ class DeltaBots:
         return self._start(side, self._attachment_motion(side, 'target', angle,
             velocity, stop, timeout_ms), wait)
 
-    def Move_Straight(self, distance=100, velocity=150, acceleration=200,
+    def Move_Straight(self, distance=100, velocity=150, acceleration=400,
                       deceleration=400, stop=Stop.BRAKE,
                       timeout_ms=DEFAULT_TIMEOUT_MS, wait=True):
         """Native DriveBase distance driving with IMU enabled."""
@@ -359,9 +388,15 @@ class DeltaBots:
         self._tank(velocity + differential, velocity - differential)
 
     def _gyro_turn(self, angle, pivot, velocity, acceleration, deceleration,
-                   tolerance, stop, timeout_ms, absolute, kp, time_ms=None):
+                   tolerance, stop, timeout_ms, absolute, kp, time_ms=None,
+                   min_rate=0, lead_ms=0):
         """Turn signed degrees; pivot -1=left, 0=center, +1=right."""
         _mode(stop)
+        if not 0 <= min_rate < float('inf'):
+            raise ValueError('min_rate must be finite and nonnegative')
+        if not 0 <= lead_ms < float('inf'):
+            raise ValueError('lead_ms must be finite and nonnegative')
+        lead = lead_ms / 1000
         if time_ms is not None:
             if not 0 <= time_ms < float('inf'):
                 raise ValueError('time_ms must be finite and nonnegative')
@@ -406,8 +441,16 @@ class DeltaBots:
                         break
                 else:
                     stable = 0
-                    desired = min(velocity, kp * abs(error),
-                                  sqrt(2 * deceleration * abs(error)))
+                    # Brake early: plan with the angle still left after the
+                    # robot keeps turning for 'lead' seconds (0 = off).
+                    plan = error - rate * lead
+                    if plan * error <= 0:
+                        desired = 0     # it will coast to the target; slow down
+                    else:
+                        desired = min(velocity, kp * abs(plan),
+                                      sqrt(2 * deceleration * abs(plan)))
+                        # Minimum approach rate: finish without creeping.
+                        desired = max(desired, min(min_rate, velocity))
                     desired *= 1 if error > 0 else -1
                     limit = acceleration if rate * desired >= 0 and abs(desired) > abs(rate) else deceleration
                     rate += _clip(desired - rate, limit * dt)
@@ -431,9 +474,11 @@ class DeltaBots:
     def _gyro_move(self, direction, distance, velocity, acceleration,
                    deceleration, stop, timeout_ms, tolerance, heading_kp,
                    max_turn_rate, distance_kp, heading_kd, turn_acceleration,
-                   time_ms=None):
+                   time_ms=None, min_speed=0):
         """Drive signed mm while maintaining direction (None=current yaw)."""
         _mode(stop)
+        if not 0 <= min_speed < float('inf'):
+            raise ValueError('min_speed must be finite and nonnegative')
         timed = time_ms is not None
         if timed:
             if not 0 <= time_ms < float('inf'):
@@ -486,6 +531,8 @@ class DeltaBots:
                 else:
                     stable = 0
                     desired = min(velocity, distance_kp * abs(error), sqrt(2 * deceleration * abs(error)))
+                    # Minimum approach speed: finish without creeping.
+                    desired = max(desired, min(min_speed, velocity))
                     desired *= 1 if error > 0 else -1
                     limit = acceleration if desired * speed >= 0 and abs(desired) > abs(speed) else deceleration
                     speed += _clip(desired - speed, limit * dt)
