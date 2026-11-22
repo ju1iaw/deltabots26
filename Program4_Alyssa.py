@@ -22,7 +22,7 @@ def Run(bot=None):
     #bot.Gyro_Turn(angle = 5, pivot = 0, absolute = True, time_ms=1000, velocity = 200) #3000
     bot.Gyro_Move(direction= 3, distance=-800, velocity=1000, wait=True)
 
-    bot.Wait_All()    
+    bot.Wait_All()        
 
 if __name__ == "__main__":
 
