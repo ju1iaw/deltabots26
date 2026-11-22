@@ -14,7 +14,7 @@ def Run(bot: DeltaBots):
     bot.Move_Straight(
         distance=790,
         velocity=1000,
-        acceleration=200,
+        acceleration=400,
         deceleration=400,
         stop=Stop.BRAKE,
         wait=True,
@@ -25,7 +25,7 @@ def Run(bot: DeltaBots):
         angle=25,
         pivot=0,
         velocity=200,
-        acceleration=200,
+        acceleration=400,
         stop=Stop.BRAKE,
         wait=True,
     )
@@ -34,7 +34,7 @@ def Run(bot: DeltaBots):
     bot.Move_Straight(
         distance=-40,
         velocity=200,
-        acceleration=200,
+        acceleration=400,
         deceleration=400,
         stop=Stop.BRAKE,
         wait=True,
@@ -47,14 +47,14 @@ def Run(bot: DeltaBots):
     bot.Move_Straight(
         distance=150,
         velocity=1000,
-        acceleration=200,
+        acceleration=400,
         deceleration=400,
         stop=Stop.BRAKE,
         wait=True,
     )
 
     # back up robot to point to mission 4
-    bot.Gyro_Move(direction=-42, distance=-200, velocity=150, acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Gyro_Move(direction=-41, distance=-200, velocity=150, acceleration=400, stop=Stop.BRAKE, wait=True)
 
     # lower down left attachment
     bot.Attachment_Time(-1, 1000, velocity=-1000, stop=Stop.HOLD, wait=True)
@@ -63,7 +63,7 @@ def Run(bot: DeltaBots):
     bot.Move_Straight(
         distance=140,
         velocity=200,
-        acceleration=200,
+        acceleration=400,
         deceleration=400,
         stop=Stop.BRAKE,
         wait=True,
@@ -73,13 +73,13 @@ def Run(bot: DeltaBots):
     bot.Attachment_Time(-1, 1000, velocity=200, stop=Stop.HOLD, wait=True)
 
     # back up robot to point to home zone
-    bot.Gyro_Move(direction=0, distance=-200, velocity=150, acceleration=200, stop=Stop.BRAKE, wait=True)
+    bot.Gyro_Move(direction=0, distance=-200, velocity=150, acceleration=400, stop=Stop.BRAKE, wait=True)
 
     # move back to home zone
     bot.Move_Straight(
         distance=-690,
         velocity=1000,
-        acceleration=200,
+        acceleration=400,
         deceleration=400,
         stop=Stop.BRAKE,
         wait=True,
