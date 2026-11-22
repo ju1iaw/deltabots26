@@ -121,11 +121,11 @@ def Run(bot: DeltaBots):
     bot.Gyro_Move(direction=0, distance=-200, velocity=150, acceleration=400, stop=Stop.BRAKE, wait=True)
 
     # Lift up right attachment arm
-    bot.Attachment_Time(1, 1000, velocity=200, stop=Stop.HOLD, wait=False)
+    bot.Attachment_Time(1, 1000, velocity=-200, stop=Stop.HOLD, wait=False)
 
     # move back to home zone
     bot.Move_Straight(
-        distance=-650,
+        distance=-630,
         velocity=1000,
         acceleration=400,
         deceleration=400,
