@@ -8,7 +8,8 @@ def Run(bot=None):
     if bot is None:
             bot = DeltaBots()   
             
-    bot.Reset_Gyro(0)            
+    bot.Reset_Gyro(0)       
+    bot.Attachment_Time(-1, 500, velocity=-300,stop=Stop.COAST, wait=False)     
     bot.Gyro_Move(direction= 1, distance = 1200, time_ms=3500, velocity=300, wait=True, stop=Stop.BRAKE)   
     bot.Wait(100)
     bot.leftDriveMotor.reset_angle(0)
@@ -20,7 +21,7 @@ def Run(bot=None):
     bot.Gyro_Turn(angle = -10, pivot = -5, absolute = True, time_ms=3000, velocity = 200) #3000
     bot.Gyro_Move(direction= -8, distance=-210, velocity=200, wait=True)
     #bot.Gyro_Turn(angle = 5, pivot = 0, absolute = True, time_ms=1000, velocity = 200) #3000
-    bot.Gyro_Move(direction= 3, distance=-800, velocity=1000, wait=True)
+    bot.Gyro_Move(direction= 3, distance=-650, velocity=1000, wait=True)
 
     bot.Wait_All()        
 
